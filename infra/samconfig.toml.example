@@ -1,0 +1,16 @@
+# Version: 0.1
+# Copy to samconfig.toml and fill values. Do not commit secrets.
+
+[default.deploy.parameters]
+stack_name = "gd-rag-cognito"
+resolve_s3 = true
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+# region = "us-east-1"
+# parameter_overrides = [
+#   "CognitoDomainPrefix=gd-rag-yourname",
+#   "GoogleClientId=REPLACE_ME",
+#   "GoogleClientSecret=REPLACE_ME",
+#   "CallbackUrls=http://localhost:3000/auth/callback",
+#   "LogoutUrls=http://localhost:3000/login",
+# ]

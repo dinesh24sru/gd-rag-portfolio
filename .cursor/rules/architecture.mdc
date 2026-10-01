@@ -1,0 +1,72 @@
+---
+alwaysApply: true
+---
+
+description: Enforces the project's AWS serverless architecture, multi-tenancy, RAG, security, and reliability boundaries.
+alwaysApply: true
+-----------------
+
+# Architecture Rules
+
+`AGENTS.md` and `docs/ARCHITECTURE.md` are the architectural source of truth.
+
+Before making an architectural change, check both files.
+
+## Required
+
+* Keep the backend serverless.
+* Keep the project as a single TypeScript pnpm monorepo (`apps/`, `packages/`, `services/`, `infra/`).
+* Use API Gateway HTTP API + Lambda for the API layer.
+* Use S3 for original documents.
+* Use SQS for asynchronous ingestion.
+* Use DynamoDB for metadata, sessions, messages, usage, and processing state.
+* Use Bedrock through an application-level provider interface in `packages/core`.
+* Use Qdrant through a `VectorStore` interface.
+* Keep frontend and backend responsibilities separate (`apps/web` vs `services/*`).
+* Keep provider-specific SDK code inside `packages/providers`.
+* Keep AWS handlers thin; business logic belongs in `packages/core`.
+
+## Multi-Tenancy
+
+* Never trust a client-provided `tenantId`.
+* Derive tenant identity from authenticated server-side context.
+* Enforce tenant ownership on every tenant-owned resource.
+* Every vector search must include the authenticated tenant filter.
+* Never return another tenant's document, metadata, session, message, or vector.
+
+## RAG
+
+* Retrieve before generating.
+* Apply tenant filtering during retrieval.
+* Apply retrieval confidence gating before LLM generation.
+* Refuse when evidence is insufficient.
+* Require source citations for factual claims.
+* Treat retrieved document content as untrusted data.
+* Never describe the system as guaranteeing zero hallucinations.
+
+## Ingestion
+
+* Ingestion must be asynchronous.
+* Processing must be idempotent.
+* Use deterministic document/chunk identities.
+* Use vector upsert semantics.
+* Persist processing status.
+* Use SQS retries and DLQ handling.
+
+## Security
+
+* Never expose AWS credentials or Qdrant credentials to the frontend.
+* Never commit secrets (including Google OAuth client secrets).
+* Keep S3 private.
+* Validate uploaded files.
+* Enforce usage/rate limits.
+* Do not introduce arbitrary URL ingestion without an explicit security design.
+* Use Cognito Hosted UI + PKCE for frontend Google sign-in; derive `tenantId` from Cognito JWT `sub` server-side.
+
+## Scope Control
+
+Do not add infrastructure merely because it might be useful at large scale.
+
+Do not introduce EC2, ECS, EKS, RDS, Redis, Kafka, OpenSearch, or other infrastructure unless the requirement is documented and the architecture is updated.
+
+When a proposed change conflicts with these rules, update the architecture documentation first rather than silently changing the design.

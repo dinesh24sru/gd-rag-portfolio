@@ -1,0 +1,150 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: GroundedRAG Cognito auth (Google IdP + Hosted UI). API/S3 resources can be added later.
+
+Parameters:
+  CognitoDomainPrefix:
+    Type: String
+    Description: Globally unique Cognito Hosted UI domain prefix (letters, numbers, hyphens).
+    AllowedPattern: "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+    ConstraintDescription: Lowercase alphanumeric with optional hyphens; 1-63 chars.
+
+  GoogleClientId:
+    Type: String
+    Description: Google OAuth 2.0 Web Client ID.
+    NoEcho: true
+
+  GoogleClientSecret:
+    Type: String
+    Description: Google OAuth 2.0 Web Client Secret.
+    NoEcho: true
+
+  CallbackUrls:
+    Type: CommaDelimitedList
+    Default: http://localhost:3000/auth/callback
+    Description: Allowed OAuth callback URLs for the web app (comma-separated).
+
+  LogoutUrls:
+    Type: CommaDelimitedList
+    Default: http://localhost:3000/login
+    Description: Allowed logout redirect URLs (comma-separated).
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AWS::StackName}-users"
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Schema:
+        - Name: email
+          Required: true
+          Mutable: true
+        - Name: name
+          Required: false
+          Mutable: true
+        - Name: picture
+          Required: false
+          Mutable: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+      UserPoolAddOns:
+        AdvancedSecurityMode: "OFF"
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+  GoogleIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: Google
+      ProviderType: Google
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: openid email profile
+      AttributeMapping:
+        email: email
+        name: name
+        picture: picture
+        username: sub
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn:
+      - GoogleIdentityProvider
+    Properties:
+      ClientName: !Sub "${AWS::StackName}-web"
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+      SupportedIdentityProviders:
+        - Google
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+      CallbackURLs: !Ref CallbackUrls
+      LogoutURLs: !Ref LogoutUrls
+      ExplicitAuthFlows:
+        - ALLOW_REFRESH_TOKEN_AUTH
+      ReadAttributes:
+        - email
+        - name
+        - picture
+        - email_verified
+      WriteAttributes:
+        - email
+        - name
+        - picture
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      UserPoolId: !Ref UserPool
+
+Outputs:
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref UserPool
+
+  UserPoolArn:
+    Description: Cognito User Pool ARN
+    Value: !GetAtt UserPool.Arn
+
+  UserPoolClientId:
+    Description: Cognito App Client ID for the Next.js web app
+    Value: !Ref UserPoolClient
+
+  CognitoDomainPrefixOut:
+    Description: Cognito Hosted UI domain prefix
+    Value: !Ref CognitoDomainPrefix
+
+  CognitoHostedUiDomain:
+    Description: Full Cognito Hosted UI domain host (no scheme)
+    Value: !Sub "${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+
+  CognitoIssuerUrl:
+    Description: OIDC issuer URL for JWT verification
+    Value: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
+
+  GoogleIdpRedirectUri:
+    Description: Authorized redirect URI to add in Google Cloud OAuth client
+    Value: !Sub "https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com/oauth2/idpresponse"
+
+  Region:
+    Description: AWS region of this stack
+    Value: !Ref AWS::Region

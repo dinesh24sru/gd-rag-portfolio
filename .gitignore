@@ -1,0 +1,14 @@
+node_modules
+.pnpm-store
+dist
+.build
+.aws-sam
+.next
+out
+coverage
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+infra/samconfig.toml

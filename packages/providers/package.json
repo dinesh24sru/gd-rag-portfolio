@@ -1,0 +1,6 @@
+{
+  "name": "@gd-rag/providers",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Infrastructure adapters implementing core provider interfaces."
+}
