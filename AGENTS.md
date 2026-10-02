@@ -106,6 +106,24 @@ or
 * Protect against prompt injection from retrieved documents.
 * Enforce per-tenant usage/rate limits.
 
+### Secrets check before commit and push
+
+Before every `git commit` and `git push`, scan the changes that would leave this machine for secrets. Do not commit or push if any are found.
+
+Block:
+
+* Private keys, cloud credentials, API keys, PATs, OAuth client secrets, and assigned passwords or tokens
+* `.env` files other than `*.example` / `*.sample` / `*.template`
+* `samconfig.toml`, credential JSON, service-account JSON, and private key / certificate files
+
+Allow:
+
+* Placeholder values in example/template files
+* CloudFormation references such as `!Ref GoogleClientSecret`
+* Docs that mention secrets without a live value
+
+If a finding appears, stop, report the file path and kind of secret (never the value), and wait for the secret to be removed.
+
 ### Provider abstraction
 
 Keep provider-specific implementations behind interfaces.

@@ -1,6 +1,14 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: GroundedRAG Cognito auth (Google IdP + Hosted UI). API/S3 resources can be added later.
+Description: GroundedRAG Cognito auth (Google IdP + Hosted UI) and HTTP API with JWT authorizer.
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 10
+    MemorySize: 256
+    Architectures:
+      - x86_64
 
 Parameters:
   CognitoDomainPrefix:
@@ -28,6 +36,11 @@ Parameters:
     Type: CommaDelimitedList
     Default: http://localhost:3000/login
     Description: Allowed logout redirect URLs (comma-separated).
+
+  CorsAllowOrigin:
+    Type: String
+    Default: http://localhost:3000
+    Description: Allowed CORS origin for the HTTP API (single origin for v1).
 
 Resources:
   UserPool:
@@ -116,6 +129,55 @@ Resources:
       Domain: !Ref CognitoDomainPrefix
       UserPoolId: !Ref UserPool
 
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref CorsAllowOrigin
+        AllowHeaders:
+          - Authorization
+          - Content-Type
+        AllowMethods:
+          - GET
+          - OPTIONS
+        MaxAge: 600
+      Auth:
+        DefaultAuthorizer: CognitoJwtAuthorizer
+        Authorizers:
+          CognitoJwtAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
+              audience:
+                - !Ref UserPoolClient
+            IdentitySource: "$request.header.Authorization"
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-api"
+      CodeUri: ../services/api/dist/
+      Handler: handler.handler
+      Description: GroundedRAG HTTP API (auth smoke endpoints)
+      Events:
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /health
+            Method: GET
+            Auth:
+              Authorizer: NONE
+        Me:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /me
+            Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+
 Outputs:
   UserPoolId:
     Description: Cognito User Pool ID
@@ -144,6 +206,10 @@ Outputs:
   GoogleIdpRedirectUri:
     Description: Authorized redirect URI to add in Google Cloud OAuth client
     Value: !Sub "https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com/oauth2/idpresponse"
+
+  ApiBaseUrl:
+    Description: HTTP API base URL (no trailing slash)
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
 
   Region:
     Description: AWS region of this stack

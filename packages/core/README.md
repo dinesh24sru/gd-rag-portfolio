@@ -16,3 +16,8 @@ Domain and application layer.
 * SAM / infrastructure definitions
 
 Place source under `src/` when implementation begins.
+
+## Auth helpers
+
+* `createAuthContextFromClaims` — maps verified JWT claims to `AuthContext` with `tenantId = sub`
+* `assertSameTenant` — blocks cross-tenant resource access

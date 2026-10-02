@@ -4,20 +4,21 @@ AWS SAM / CloudFormation for GroundedRAG.
 
 ## Current stack
 
-Cognito-first auth stack in [`template.yaml`](template.yaml):
+Resources in [`template.yaml`](template.yaml):
 
 * Cognito User Pool
 * Google identity provider
 * Public app client (Authorization Code + PKCE)
 * Hosted UI domain
-
-API Gateway, Lambdas, S3, SQS, and DynamoDB will be added in later stacks/templates.
+* HTTP API with Cognito JWT authorizer
+* API Lambda (`GET /health` public, `GET /me` JWT-protected)
 
 ## Prerequisites
 
 1. AWS CLI configured (`aws sts get-caller-identity` works)
 2. [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) installed
 3. Google Cloud OAuth **Web application** client ID + secret
+4. Node.js 20+ and npm available (run `npm run build:api` before `sam build`)
 
 ## Google Cloud OAuth setup
 
@@ -36,12 +37,19 @@ API Gateway, Lambdas, S3, SQS, and DynamoDB will be added in later stacks/templa
 
 4. Keep Client ID and Client Secret out of git. Pass them only as SAM parameters.
 
-## Deploy Cognito
+## Deploy
+
+Build the API bundle first (esbuild), then SAM package/deploy:
 
 ```bash
+# from repo root
+npm run build:api
+
 cd infra
 cp samconfig.toml.example samconfig.toml
 # edit samconfig.toml region / parameter_overrides as needed
+
+sam build
 
 sam deploy \
   --guided \
@@ -50,7 +58,8 @@ sam deploy \
     GoogleClientId=YOUR_GOOGLE_CLIENT_ID \
     GoogleClientSecret=YOUR_GOOGLE_CLIENT_SECRET \
     CallbackUrls=http://localhost:3000/auth/callback \
-    LogoutUrls=http://localhost:3000/login
+    LogoutUrls=http://localhost:3000/login \
+    CorsAllowOrigin=http://localhost:3000
 ```
 
 `CognitoDomainPrefix` must be globally unique in the region.
@@ -65,6 +74,7 @@ NEXT_PUBLIC_COGNITO_USER_POOL_ID=<UserPoolId>
 NEXT_PUBLIC_COGNITO_CLIENT_ID=<UserPoolClientId>
 NEXT_PUBLIC_COGNITO_DOMAIN=<CognitoHostedUiDomain>
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_API_BASE_URL=<ApiBaseUrl>
 ```
 
 Then:
@@ -76,8 +86,30 @@ npm run dev
 
 Open http://localhost:3000/login → **Continue with Google**.
 
+## Smoke-test the API
+
+Public health check:
+
+```bash
+curl -sS "$API_BASE_URL/health"
+# {"ok":true}
+```
+
+Authenticated identity (use Cognito **access token** from the browser session):
+
+```bash
+curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" "$API_BASE_URL/me"
+# {"tenantId":"<cognito-sub>","sub":"<cognito-sub>","email":null}
+```
+
+Notes:
+
+* API Gateway validates the JWT; Lambda derives `tenantId` from claim `sub` only.
+* Cognito access tokens often omit `email`; that field may be `null` on `/me`.
+* Unauthenticated `GET /me` returns `401`.
+
 ## Rules
 
 * Keep application algorithms out of this folder.
 * Never commit secrets or `samconfig.toml` if it contains secrets.
-* Reference built artifacts from `services/*` when API/worker resources are added.
+* API code lives in `services/api`; run `npm run build:api` before `sam build` (output: `services/api/dist`).

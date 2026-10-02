@@ -13,4 +13,5 @@ confirm_changeset = true
 #   "GoogleClientSecret=REPLACE_ME",
 #   "CallbackUrls=http://localhost:3000/auth/callback",
 #   "LogoutUrls=http://localhost:3000/login",
+#   "CorsAllowOrigin=http://localhost:3000",
 # ]

@@ -33,8 +33,10 @@ docs                      Architecture source of truth
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`AGENTS.md`](AGENTS.md) before changing structure or adding infrastructure.
 
-## Auth (Cognito)
+## Auth (Cognito + API JWT)
 
-Deploy Cognito from [`infra/`](infra/), then configure `apps/web/.env.local` from stack outputs. See [`infra/README.md`](infra/README.md).
+Deploy Cognito and the HTTP API from [`infra/`](infra/), then configure `apps/web/.env.local` from stack outputs (`ApiBaseUrl` included). See [`infra/README.md`](infra/README.md).
 
-Google OAuth Client ID/Secret are SAM deploy parameters only — never commit them.
+* Frontend: Cognito Hosted UI + PKCE
+* API: HTTP API Cognito JWT authorizer; `GET /me` returns `tenantId = sub`
+* Google OAuth Client ID/Secret are SAM deploy parameters only — never commit them.

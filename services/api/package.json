@@ -2,5 +2,22 @@
   "name": "@gd-rag/api",
   "version": "0.0.0",
   "private": true,
-  "description": "API Gateway HTTP API Lambda handlers."
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "build": "node ../../scripts/build-api.mjs"
+  },
+  "dependencies": {
+    "@gd-rag/core": "file:../../packages/core",
+    "@gd-rag/shared": "file:../../packages/shared",
+    "gd-rag-portfolio": "file:../.."
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
+    "@types/node": "^22.18.1",
+    "esbuild": "^0.25.9",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
 }

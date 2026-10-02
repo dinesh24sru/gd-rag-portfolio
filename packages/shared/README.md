@@ -14,3 +14,8 @@ Cross-cutting shared code.
 * Provider SDK wrappers
 
 Place source under `src/` when implementation begins.
+
+## Auth / API contracts
+
+* `AuthClaims` — claim bag after JWT authorizer validation
+* `UnauthorizedError` / `ForbiddenError` / `NotFoundError` — typed API errors

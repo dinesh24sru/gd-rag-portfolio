@@ -329,6 +329,12 @@ tenantId = Cognito JWT "sub"
 
 API handlers must verify the Cognito JWT and derive `tenantId` from claims. Never accept `tenantId` from the request body.
 
+v1 implementation:
+
+* API Gateway HTTP API Cognito JWT authorizer validates the bearer token (signature, issuer, audience).
+* Lambda reads `event.requestContext.authorizer.jwt.claims` and maps `tenantId = sub` in `packages/core`.
+* Smoke routes: `GET /health` (public), `GET /me` (JWT required).
+
 ---
 
 ## 10. Data Storage

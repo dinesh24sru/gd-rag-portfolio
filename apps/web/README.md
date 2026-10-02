@@ -24,4 +24,5 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Notes
 
 * Do not put Google client secrets or AWS credentials in this app.
-* Frontend only needs public Cognito env vars (see `.env.example`).
+* Frontend only needs public Cognito + API base URL env vars (see `.env.example`).
+* Profile page calls `GET /me` with the Cognito access token to verify server-side `tenantId`.

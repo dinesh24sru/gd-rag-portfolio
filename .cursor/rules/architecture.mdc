@@ -62,6 +62,7 @@ Before making an architectural change, check both files.
 * Enforce usage/rate limits.
 * Do not introduce arbitrary URL ingestion without an explicit security design.
 * Use Cognito Hosted UI + PKCE for frontend Google sign-in; derive `tenantId` from Cognito JWT `sub` server-side.
+* Before every `git commit` and `git push`, scan staged/outgoing changes for secrets, passwords, API keys, private keys, `.env` (non-example), and `samconfig.toml`. Stop and report the file/kind (never the value) if anything sensitive is found.
 
 ## Scope Control
 
