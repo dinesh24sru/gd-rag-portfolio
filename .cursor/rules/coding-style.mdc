@@ -1,0 +1,30 @@
+---
+description: Enforces modular, simple coding style and small-task planning across the monorepo.
+alwaysApply: true
+---
+
+# Coding Style
+
+`AGENTS.md` is the source of truth. Follow these on every change.
+
+## Required
+
+* Modular and reusable: small single-purpose units; share via `packages/core`, `packages/shared`, `packages/providers`.
+* Simple and straightforward: linear control flow, plain names, fail fast; clarity over cleverness.
+* No bloat: no speculative features, unused wrappers, dead code, or “just in case” options.
+* No redundancy: extract duplicated logic; never copy tenant/auth/RAG rules across handlers or services.
+* Shortest correct readable implementation. Abstract only at real provider/domain boundaries or after a second real use.
+
+## Planning
+
+* Break work into the smallest useful tasks; implement one clear outcome at a time.
+* Prefer many small shippable steps over one large change.
+* Plan briefly → do the next smallest task → verify → continue.
+* Do not mix unrelated refactors into the current task.
+
+## Do not
+
+* Add layers that only forward calls.
+* Generalize from a single call site.
+* Leave commented-out alternatives or unused dependencies.
+* Batch a whole feature vertical when a thinner next step exists.

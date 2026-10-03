@@ -166,6 +166,20 @@ Be stringent. Prefer the cheapest correct option. Do not over-allocate “just i
 
 ## Coding Rules
 
+### Style (required)
+
+Write modular, reusable, simple, straightforward code. Prefer clarity over cleverness.
+
+* Keep units small and single-purpose: one clear job per function/module; compose rather than nest deep logic.
+* Reuse shared helpers and workspace packages (`packages/core`, `packages/shared`, `packages/providers`) instead of copy-pasting.
+* Do not bloat: no speculative features, unused abstractions, wrapper layers that only forward calls, or “just in case” config/options.
+* Avoid redundant code: extract when the same logic appears twice with the same meaning; do not duplicate tenant/auth/RAG rules across handlers or services.
+* Prefer the shortest correct implementation that stays readable. Delete dead code; do not leave commented-out alternatives.
+* Avoid premature abstraction: wait for a second real use before generalizing. Interfaces exist for provider boundaries, not for every local helper.
+* Name things plainly; keep control flow linear where possible; fail fast with explicit errors.
+
+### Structure and practices
+
 * TypeScript for application/backend code unless a specific component requires another language.
 * Use the monorepo workspace packages; do not create separate repos for frontend, API, worker, or providers.
 * Keep business logic separate from AWS handlers (`packages/core`, not `services/*`).
@@ -175,7 +189,7 @@ Be stringent. Prefer the cheapest correct option. Do not over-allocate “just i
 * Do not duplicate tenant authorization logic across handlers; centralize it in `packages/core`.
 * Do not hard-code credentials, tenant IDs, AWS regions, model IDs, or environment-specific configuration.
 * Add tests for security-sensitive and RAG-critical behavior.
-* Avoid premature abstractions, unused dependencies, and large SDK surface area in Lambda bundles.
+* Avoid unused dependencies and large SDK surface area in Lambda bundles.
 * Prefer deterministic IDs, idempotent writes, and clear error types over silent retries.
 
 ### AWS SDK and Lambda practices
@@ -191,6 +205,18 @@ Be stringent. Prefer the cheapest correct option. Do not over-allocate “just i
 * Bundle with esbuild/tree-shaking; exclude AWS SDK from browsers; keep Lambda artifacts small.
 
 ## Change Discipline
+
+### Planning and execution
+
+Break work into the smallest useful tasks, then complete them one at a time.
+
+* Prefer many small, shippable steps over one large change.
+* Each task should have a clear outcome (e.g. one route, one provider method, one status transition)—not a whole vertical slice unless asked.
+* Plan briefly, implement the next smallest task, verify, then move on.
+* Do not batch unrelated refactors with feature work.
+* Keep PRs/commits focused when the user asks to commit.
+
+### Architecture changes
 
 Before changing architecture:
 

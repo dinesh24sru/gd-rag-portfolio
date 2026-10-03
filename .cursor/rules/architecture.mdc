@@ -27,6 +27,7 @@ Near-zero portfolio stack; **worst case ≤ $10/month**. Be stringent on every r
 
 ## Coding / AWS SDK
 
+* Style: modular, reusable, simple, straightforward; no bloat or redundant copies (see `coding-style.mdc` / `AGENTS.md`).
 * AWS SDK v3 modular clients only; reuse clients outside the handler; least-privilege IAM.
 * Small esbuild bundles; bounded retries/timeouts; validate at boundaries; no hard-coded secrets/regions/model IDs.
 * Prefer presigned S3 uploads and idempotent writes.
