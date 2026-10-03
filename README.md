@@ -8,7 +8,7 @@ Users upload documents and ask questions. Answers are grounded only in the authe
 
 **App:** [https://gd-rag-portfolio.vercel.app](https://gd-rag-portfolio.vercel.app)
 
-Sign in with Google (Cognito Hosted UI). After login, open **Profile** to confirm API `tenantId` matches your Cognito `sub`.
+Sign in with Google (Cognito Hosted UI + PKCE). After login, open **Profile** to confirm API `tenantId` matches your Cognito `sub`.
 
 ## Stack
 
