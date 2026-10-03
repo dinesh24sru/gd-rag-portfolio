@@ -5,6 +5,7 @@ export {
   ForbiddenError,
   NotFoundError,
   ValidationError,
+  PermanentIngestionError,
 } from "./errors";
 export type {
   DocumentStatus,

@@ -5,24 +5,29 @@ Domain and application layer.
 ## Owns
 
 * Tenant authorization rules
-* Document ingestion use cases
-* Retrieval → confidence gate → LLM → citation flow
-* Provider interfaces (`VectorStore`, `EmbeddingProvider`, `LLMProvider`, `DocumentStore`)
+* Document upload/delete use cases
+* Ingestion: extract → chunk → embed orchestration (`ingestDocument`)
+* Provider interfaces (`VectorStore`, `EmbeddingProvider`, `DocumentRepository`, `ObjectStorage`)
+* Retrieval → confidence gate → LLM → citation flow (ask path; next)
 
 ## Must not own
 
 * AWS SDK / Qdrant SDK / Bedrock SDK usage
-* HTTP or Lambda event parsing
+* HTTP or Lambda event wiring (thin handlers in `services/*`)
 * SAM / infrastructure definitions
-
-Place source under `src/` when implementation begins.
 
 ## Auth helpers
 
 * `createAuthContextFromClaims` — maps verified JWT claims to `AuthContext` with `tenantId = sub`
 * `assertSameTenant` — blocks cross-tenant resource access
 
-## Document upload
+## Documents
 
 * `createUpload` — validate type/size, persist `PENDING` metadata, return presigned PUT target
-* `listDocuments` / `getDocument` — tenant-scoped reads via `DocumentRepository`
+* `listDocuments` / `getDocument` / `deleteDocument` — tenant-scoped
+* `ingestDocument` — PENDING/FAILED → PROCESSING → READY (or FAILED)
+
+## Ingestion helpers
+
+* `parseDocumentObjectKey` / `parseS3EventRecords`
+* `extractTextFromObject` / `chunkText`

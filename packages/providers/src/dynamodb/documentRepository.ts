@@ -5,6 +5,7 @@ import {
   GetCommand,
   PutCommand,
   QueryCommand,
+  UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import type { DocumentRepository } from "@gd-rag/core";
 import type { DocumentRecord } from "@gd-rag/shared";
@@ -70,6 +71,21 @@ export function createDynamoDocumentRepository(
         new DeleteCommand({
           TableName: tableName,
           Key: { tenantId, documentId },
+        }),
+      );
+    },
+
+    async updateStatus(params): Promise<void> {
+      await client.send(
+        new UpdateCommand({
+          TableName: tableName,
+          Key: { tenantId: params.tenantId, documentId: params.documentId },
+          UpdateExpression: "SET #status = :status, updatedAt = :updatedAt",
+          ExpressionAttributeNames: { "#status": "status" },
+          ExpressionAttributeValues: {
+            ":status": params.status,
+            ":updatedAt": params.updatedAt,
+          },
         }),
       );
     },

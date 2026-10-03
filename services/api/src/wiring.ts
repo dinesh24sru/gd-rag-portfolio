@@ -6,8 +6,13 @@ import {
   type CreateUploadDeps,
   type DocumentRepository,
   type ObjectStorage,
+  type VectorStore,
 } from "@gd-rag/core";
-import { createDynamoDocumentRepository, createS3ObjectStorage } from "@gd-rag/providers";
+import {
+  createDynamoDocumentRepository,
+  createQdrantVectorStore,
+  createS3ObjectStorage,
+} from "@gd-rag/providers";
 import type { AuthContext } from "@gd-rag/core";
 import type { CreateUploadRequest, DocumentRecord } from "@gd-rag/shared";
 
@@ -41,11 +46,23 @@ function requiredEnv(name: string): string {
   return value;
 }
 
+function optionalVectorStore(): VectorStore | undefined {
+  const url = process.env.QDRANT_URL?.trim();
+  const apiKey = process.env.QDRANT_API_KEY?.trim();
+  const collection = process.env.QDRANT_COLLECTION?.trim();
+  if (!url || !apiKey || !collection) {
+    return undefined;
+  }
+  const dimensions = Number(process.env.EMBEDDING_DIMENSIONS ?? "256");
+  return createQdrantVectorStore({ url, apiKey, collection, dimensions });
+}
+
 function buildFromEnv(): ApiWiring {
   const tableName = requiredEnv("DOCUMENTS_TABLE_NAME");
   const bucketName = requiredEnv("DOCUMENTS_BUCKET_NAME");
   const documents: DocumentRepository = createDynamoDocumentRepository({ tableName });
   const objects: ObjectStorage = createS3ObjectStorage({ bucketName });
+  const vectors = optionalVectorStore();
   const deps: CreateUploadDeps = { documents, objects };
 
   return {
@@ -53,7 +70,8 @@ function buildFromEnv(): ApiWiring {
       createUpload: (auth, input) => createUpload(auth, input, deps),
       listDocuments: (auth) => listDocuments(auth, documents),
       getDocument: (auth, documentId) => getDocument(auth, documentId, documents),
-      deleteDocument: (auth, documentId) => deleteDocument(auth, documentId, deps),
+      deleteDocument: (auth, documentId) =>
+        deleteDocument(auth, documentId, { documents, objects, vectors }),
     },
   };
 }

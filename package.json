@@ -8,6 +8,8 @@
   "scripts": {
     "build": "pnpm -r run build",
     "build:api": "node ./scripts/build-api.mjs",
+    "build:worker": "node ./scripts/build-worker.mjs",
+    "build:lambdas": "npm run build:api && npm run build:worker",
     "deploy:sam": "node ./scripts/deploy-sam.mjs",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",

@@ -32,8 +32,8 @@ if ($env:AWS_PROFILE) {
   Write-Host "Using AWS_PROFILE=$($env:AWS_PROFILE)"
 }
 
-Write-Host "==> Building API bundle (esbuild → services/api/dist)"
-npm run build:api
+Write-Host "==> Building Lambda bundles (API + ingestion worker)"
+npm run build:lambdas
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "==> sam build"

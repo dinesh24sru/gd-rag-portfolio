@@ -1,14 +1,16 @@
 import { NotFoundError } from "@gd-rag/shared";
 import { assertSameTenant, type AuthContext } from "../auth/context";
+import type { VectorStore } from "../ingestion/ports";
 import type { DocumentRepository, ObjectStorage } from "./ports";
 
 export type DeleteDocumentDeps = {
   documents: DocumentRepository;
   objects: ObjectStorage;
+  vectors?: VectorStore;
 };
 
 /**
- * Tenant-scoped delete: remove S3 object (if present), then DynamoDB metadata.
+ * Tenant-scoped delete: vectors (if configured), S3 object, then DynamoDB metadata.
  * Ownership is always checked from authenticated context.
  */
 export async function deleteDocument(
@@ -28,6 +30,9 @@ export async function deleteDocument(
 
   assertSameTenant(document.tenantId, auth);
 
+  if (deps.vectors) {
+    await deps.vectors.deleteDocument(auth.tenantId, document.documentId);
+  }
   await deps.objects.deleteObject(document.s3Key);
   await deps.documents.delete(auth.tenantId, document.documentId);
 }

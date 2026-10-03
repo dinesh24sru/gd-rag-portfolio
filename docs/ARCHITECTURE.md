@@ -156,7 +156,7 @@ v1 upload implementation:
 * `POST /documents/upload-url` creates a `PENDING` metadata row (tenant = Cognito `sub`) and returns a short-lived S3 presigned PUT URL.
 * Browser uploads directly to private S3 (`tenant/{tenantId}/documents/{documentId}/{version}/original`).
 * Allowed types: PDF / plain text / Markdown; max 10 MiB; DynamoDB on-demand; S3 Block Public Access.
-* SQS → ingestion worker (extract/chunk/embed) is the next step after upload.
+* SQS → ingestion worker (extract/chunk/embed/index) advances status `PENDING → PROCESSING → READY` (or `FAILED`).
 
 ---
 

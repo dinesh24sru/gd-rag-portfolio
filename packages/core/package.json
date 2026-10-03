@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@gd-rag/shared": "file:../shared",
-    "gd-rag-portfolio": "file:../.."
+    "gd-rag-portfolio": "file:../..",
+    "unpdf": "^1.1.0"
   },
   "devDependencies": {
     "tsx": "^4.20.5",

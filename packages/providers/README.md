@@ -4,9 +4,10 @@ Provider implementations behind `packages/core` interfaces.
 
 ## Adapters
 
-* `createDynamoDocumentRepository` — document metadata (DynamoDB on-demand)
-* `createS3ObjectStorage` — short-lived S3 presigned PUT URLs
-* (later) Qdrant / Bedrock
+* `createDynamoDocumentRepository` — document metadata + status updates (DynamoDB on-demand)
+* `createS3ObjectStorage` — presigned PUT, getObject, deleteObject
+* `createBedrockEmbeddingProvider` — Titan text embeddings via Bedrock
+* `createQdrantVectorStore` — tenant-filtered upsert/search/delete
 
 ## Rules
 

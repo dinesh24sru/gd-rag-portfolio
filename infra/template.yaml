@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: GD RAG Cognito auth, HTTP API, private document bucket, and documents table.
+Description: GD RAG Cognito auth, HTTP API, documents storage, and SQS ingestion worker.
 
 Globals:
   Function:
@@ -41,6 +41,34 @@ Parameters:
     Type: CommaDelimitedList
     Default: http://localhost:3000
     Description: Allowed CORS origins for the HTTP API and S3 uploads (comma-separated).
+
+  QdrantUrl:
+    Type: String
+    Default: ""
+    Description: Qdrant Cloud REST URL (https://....). Required for ingestion indexing.
+
+  QdrantApiKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: Qdrant Cloud API key. Required for ingestion indexing.
+
+  QdrantCollectionName:
+    Type: String
+    Default: gd-rag-chunks
+    Description: Qdrant collection name for document chunks.
+
+  BedrockEmbeddingModelId:
+    Type: String
+    Default: amazon.titan-embed-text-v2:0
+    Description: Bedrock embedding model ID (smallest suitable Titan embed).
+
+  EmbeddingDimensions:
+    Type: Number
+    Default: 256
+    MinValue: 256
+    MaxValue: 1024
+    Description: Titan embed output dimensions (keep small for cost).
 
 Resources:
   UserPool:
@@ -129,8 +157,48 @@ Resources:
       Domain: !Ref CognitoDomainPrefix
       UserPoolId: !Ref UserPool
 
+  IngestionDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 # 14 days
+      SqsManagedSseEnabled: true
+
+  IngestionQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 90 # > worker timeout
+      MessageRetentionPeriod: 345600 # 4 days
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt IngestionDLQ.Arn
+        maxReceiveCount: 3
+
+  # SourceArn uses stack-name prefix (not !GetAtt DocumentsBucket) to avoid
+  # Bucket ↔ QueuePolicy circular dependency when the bucket also notifies this queue.
+  IngestionQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref IngestionQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowS3ObjectCreated
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt IngestionQueue.Arn
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub "arn:aws:s3:::${AWS::StackName}-*"
+
   DocumentsBucket:
     Type: AWS::S3::Bucket
+    DependsOn:
+      - IngestionQueuePolicy
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -167,6 +235,17 @@ Resources:
               - x-amz-request-id
               - x-amz-id-2
             MaxAge: 3000
+      NotificationConfiguration:
+        QueueConfigurations:
+          - Event: s3:ObjectCreated:*
+            Queue: !GetAtt IngestionQueue.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: tenant/
+                  - Name: suffix
+                    Value: /original
 
   DocumentsTable:
     Type: AWS::DynamoDB::Table
@@ -219,6 +298,10 @@ Resources:
         Variables:
           DOCUMENTS_TABLE_NAME: !Ref DocumentsTable
           DOCUMENTS_BUCKET_NAME: !Ref DocumentsBucket
+          QDRANT_URL: !Ref QdrantUrl
+          QDRANT_API_KEY: !Ref QdrantApiKey
+          QDRANT_COLLECTION: !Ref QdrantCollectionName
+          EMBEDDING_DIMENSIONS: !Sub "${EmbeddingDimensions}"
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DocumentsTable
@@ -274,6 +357,51 @@ Resources:
             Auth:
               Authorizer: CognitoJwtAuthorizer
 
+  IngestionWorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-ingestion"
+      RetentionInDays: 14
+
+  IngestionWorkerFunction:
+    Type: AWS::Serverless::Function
+    DependsOn:
+      - IngestionWorkerLogGroup
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-ingestion"
+      CodeUri: ../services/ingestion-worker/dist/
+      Handler: handler.handler
+      Description: SQS document ingestion worker (extract → chunk → embed → index)
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          DOCUMENTS_TABLE_NAME: !Ref DocumentsTable
+          DOCUMENTS_BUCKET_NAME: !Ref DocumentsBucket
+          QDRANT_URL: !Ref QdrantUrl
+          QDRANT_API_KEY: !Ref QdrantApiKey
+          QDRANT_COLLECTION: !Ref QdrantCollectionName
+          BEDROCK_EMBEDDING_MODEL_ID: !Ref BedrockEmbeddingModelId
+          EMBEDDING_DIMENSIONS: !Sub "${EmbeddingDimensions}"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DocumentsTable
+        - S3ReadPolicy:
+            BucketName: !Ref DocumentsBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockEmbeddingModelId}"
+      Events:
+        IngestionQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt IngestionQueue.Arn
+            BatchSize: 5
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+
 Outputs:
   UserPoolId:
     Description: Cognito User Pool ID
@@ -314,6 +442,14 @@ Outputs:
   DocumentsTableName:
     Description: DynamoDB table for document metadata
     Value: !Ref DocumentsTable
+
+  IngestionQueueUrl:
+    Description: SQS URL for document ingestion
+    Value: !Ref IngestionQueue
+
+  IngestionDLQUrl:
+    Description: SQS DLQ URL for failed ingestion messages
+    Value: !Ref IngestionDLQ
 
   Region:
     Description: AWS region of this stack

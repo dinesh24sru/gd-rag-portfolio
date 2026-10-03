@@ -12,15 +12,19 @@ Resources in [`template.yaml`](template.yaml):
 * Hosted UI domain
 * HTTP API with Cognito JWT authorizer
 * API Lambda (`GET /health`, `GET /me`, document upload routes)
-* Private S3 bucket for originals (Block Public Access + abort incomplete multipart)
+* Private S3 bucket for originals (Block Public Access + abort incomplete multipart + ObjectCreated → SQS)
 * DynamoDB documents table (on-demand)
+* Ingestion SQS queue + DLQ
+* Ingestion worker Lambda (extract → chunk → Bedrock embed → Qdrant)
 
 ## Prerequisites
 
 1. AWS CLI configured (`aws sts get-caller-identity` works)
 2. [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) installed
 3. Google Cloud OAuth **Web application** client ID + secret
-4. Node.js 20+ and npm available (run `npm run build:api` before `sam build`)
+4. Node.js 20+ and npm available (run `npm run build:lambdas` before `sam build`)
+5. Qdrant Cloud URL + API key (for indexing)
+6. Bedrock model access in the deploy region for `amazon.titan-embed-text-v2:0` (or your override)
 
 ## Google Cloud OAuth setup
 
@@ -58,18 +62,24 @@ AWS_PROFILE=local npm run deploy:sam
 npm run deploy:sam -- --no-confirm
 ```
 
-`npm run deploy:sam` runs `scripts/deploy-sam.mjs`, which launches `deploy-sam.ps1` on Windows or `deploy-sam.sh` elsewhere. It runs `build:api`, then `sam build` + `sam deploy` using `infra/samconfig.toml`.
+`npm run deploy:sam` runs `scripts/deploy-sam.mjs`, which launches `deploy-sam.ps1` on Windows or `deploy-sam.sh` elsewhere. It runs `build:lambdas` (API + worker), then `sam build` + `sam deploy` using `infra/samconfig.toml`.
 
 Manual equivalent:
 
 ```bash
 # from repo root
-npm run build:api
+npm run build:lambdas
 
 cd infra
 sam build
 sam deploy
 ```
+
+Add these SAM parameters (see `samconfig.toml.example`) for ingestion:
+
+* `QdrantUrl` / `QdrantApiKey` / `QdrantCollectionName`
+* `BedrockEmbeddingModelId` (default Titan embed v2)
+* `EmbeddingDimensions` (default `256`)
 
 Guided first-time deploy (optional):
 
@@ -83,7 +93,9 @@ sam deploy \
     GoogleClientSecret=YOUR_GOOGLE_CLIENT_SECRET \
     CallbackUrls=http://localhost:3000/auth/callback,https://gd-rag-portfolio.vercel.app/auth/callback \
     LogoutUrls=http://localhost:3000/login,https://gd-rag-portfolio.vercel.app/login \
-    CorsAllowOrigin=http://localhost:3000,https://gd-rag-portfolio.vercel.app
+    CorsAllowOrigin=http://localhost:3000,https://gd-rag-portfolio.vercel.app \
+    QdrantUrl=https://YOUR_CLUSTER.cloud.qdrant.io \
+    QdrantApiKey=YOUR_QDRANT_KEY
 ```
 
 `CognitoDomainPrefix` must be globally unique in the region.

@@ -39,3 +39,11 @@ export class ValidationError extends AppError {
     this.name = "ValidationError";
   }
 }
+
+/** Permanent ingestion failure — do not retry via SQS; mark document FAILED. */
+export class PermanentIngestionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PermanentIngestionError";
+  }
+}

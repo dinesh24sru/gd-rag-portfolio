@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the API Lambda bundle and deploy the SAM stack.
+# Build Lambda bundles (API + ingestion worker) and deploy the SAM stack.
 # Usage (from repo root, Git Bash / WSL / macOS / Linux):
 #   ./scripts/deploy-sam.sh
 #   AWS_PROFILE=local ./scripts/deploy-sam.sh
@@ -56,8 +56,8 @@ if [[ -n "${AWS_PROFILE:-}" ]]; then
   echo "Using AWS_PROFILE=${AWS_PROFILE}"
 fi
 
-echo "==> Building API bundle (esbuild → services/api/dist)"
-npm run build:api
+echo "==> Building Lambda bundles (API + ingestion worker)"
+npm run build:lambdas
 
 echo "==> sam build"
 (

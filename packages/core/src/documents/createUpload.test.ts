@@ -21,12 +21,24 @@ function memoryRepo(): DocumentRepository & { items: DocumentRecord[] } {
       const idx = items.findIndex((d) => d.tenantId === tenantId && d.documentId === documentId);
       if (idx >= 0) items.splice(idx, 1);
     },
+    async updateStatus(params) {
+      const doc = items.find(
+        (d) => d.tenantId === params.tenantId && d.documentId === params.documentId,
+      );
+      if (doc) {
+        doc.status = params.status;
+        doc.updatedAt = params.updatedAt;
+      }
+    },
   };
 }
 
 const stubObjects: ObjectStorage = {
   async presignPut() {
     return "https://example.com/upload";
+  },
+  async getObject() {
+    return { body: new Uint8Array() };
   },
   async deleteObject() {},
 };

@@ -14,4 +14,9 @@ confirm_changeset = true
 #   "CallbackUrls=http://localhost:3000/auth/callback,https://gd-rag-portfolio.vercel.app/auth/callback",
 #   "LogoutUrls=http://localhost:3000/login,https://gd-rag-portfolio.vercel.app/login",
 #   "CorsAllowOrigin=http://localhost:3000,https://gd-rag-portfolio.vercel.app",
+#   "QdrantUrl=https://YOUR_CLUSTER.cloud.qdrant.io",
+#   "QdrantApiKey=REPLACE_ME",
+#   "QdrantCollectionName=gd-rag-chunks",
+#   "BedrockEmbeddingModelId=amazon.titan-embed-text-v2:0",
+#   "EmbeddingDimensions=256",
 # ]

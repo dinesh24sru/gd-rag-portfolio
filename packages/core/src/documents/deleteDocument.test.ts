@@ -21,6 +21,15 @@ function memoryRepo(seed: DocumentRecord[]): DocumentRepository & { items: Docum
       const idx = items.findIndex((d) => d.tenantId === tenantId && d.documentId === documentId);
       if (idx >= 0) items.splice(idx, 1);
     },
+    async updateStatus(params) {
+      const doc = items.find(
+        (d) => d.tenantId === params.tenantId && d.documentId === params.documentId,
+      );
+      if (doc) {
+        doc.status = params.status;
+        doc.updatedAt = params.updatedAt;
+      }
+    },
   };
 }
 
@@ -44,6 +53,9 @@ describe("deleteDocument", () => {
     const objects: ObjectStorage = {
       async presignPut() {
         return "";
+      },
+      async getObject() {
+        return { body: new Uint8Array() };
       },
       async deleteObject(key) {
         deletedKeys.push(key);
@@ -82,6 +94,9 @@ describe("deleteDocument", () => {
           objects: {
             async presignPut() {
               return "";
+            },
+            async getObject() {
+              return { body: new Uint8Array() };
             },
             async deleteObject() {},
           },

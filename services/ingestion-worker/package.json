@@ -2,5 +2,21 @@
   "name": "@gd-rag/ingestion-worker",
   "version": "0.0.0",
   "private": true,
-  "description": "SQS-triggered Lambda worker for async document ingestion."
+  "description": "SQS-triggered Lambda worker for async document ingestion.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@gd-rag/core": "file:../../packages/core",
+    "@gd-rag/providers": "file:../../packages/providers",
+    "@gd-rag/shared": "file:../../packages/shared"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
+    "@types/node": "^22.18.1",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
 }
