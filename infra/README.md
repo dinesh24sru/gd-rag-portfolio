@@ -41,18 +41,40 @@ Resources in [`template.yaml`](template.yaml):
 
 ## Deploy
 
-Build the API bundle first (esbuild), then SAM package/deploy:
+One-shot from repo root (works in Windows PowerShell and Unix):
+
+```bash
+# first time: copy and fill secrets locally (never commit)
+cp infra/samconfig.toml.example infra/samconfig.toml
+
+# PowerShell
+$env:AWS_PROFILE = "local"
+npm run deploy:sam
+
+# bash / macOS / Linux
+AWS_PROFILE=local npm run deploy:sam
+
+# skip changeset prompt
+npm run deploy:sam -- --no-confirm
+```
+
+`npm run deploy:sam` runs `scripts/deploy-sam.mjs`, which launches `deploy-sam.ps1` on Windows or `deploy-sam.sh` elsewhere. It runs `build:api`, then `sam build` + `sam deploy` using `infra/samconfig.toml`.
+
+Manual equivalent:
 
 ```bash
 # from repo root
 npm run build:api
 
 cd infra
-cp samconfig.toml.example samconfig.toml
-# edit samconfig.toml region / parameter_overrides as needed
-
 sam build
+sam deploy
+```
 
+Guided first-time deploy (optional):
+
+```bash
+cd infra
 sam deploy \
   --guided \
   --parameter-overrides \
