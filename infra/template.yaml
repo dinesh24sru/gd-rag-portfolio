@@ -38,9 +38,9 @@ Parameters:
     Description: Allowed logout redirect URLs (comma-separated).
 
   CorsAllowOrigin:
-    Type: String
+    Type: CommaDelimitedList
     Default: http://localhost:3000
-    Description: Allowed CORS origin for the HTTP API (single origin for v1).
+    Description: Allowed CORS origins for the HTTP API (comma-separated; include localhost and Vercel).
 
 Resources:
   UserPool:
@@ -134,8 +134,7 @@ Resources:
     Properties:
       StageName: $default
       CorsConfiguration:
-        AllowOrigins:
-          - !Ref CorsAllowOrigin
+        AllowOrigins: !Ref CorsAllowOrigin
         AllowHeaders:
           - Authorization
           - Content-Type
