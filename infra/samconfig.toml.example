@@ -11,7 +11,7 @@ confirm_changeset = true
 #   "CognitoDomainPrefix=gd-rag-yourname",
 #   "GoogleClientId=REPLACE_ME",
 #   "GoogleClientSecret=REPLACE_ME",
-#   "CallbackUrls=http://localhost:3000/auth/callback,https://YOUR_APP.vercel.app/auth/callback",
-#   "LogoutUrls=http://localhost:3000/login,https://YOUR_APP.vercel.app/login",
-#   "CorsAllowOrigin=http://localhost:3000,https://YOUR_APP.vercel.app",
+#   "CallbackUrls=http://localhost:3000/auth/callback,https://gd-rag-portfolio.vercel.app/auth/callback",
+#   "LogoutUrls=http://localhost:3000/login,https://gd-rag-portfolio.vercel.app/login",
+#   "CorsAllowOrigin=http://localhost:3000,https://gd-rag-portfolio.vercel.app",
 # ]

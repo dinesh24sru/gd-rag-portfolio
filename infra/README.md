@@ -57,9 +57,9 @@ sam deploy \
     CognitoDomainPrefix=gd-rag-yourname \
     GoogleClientId=YOUR_GOOGLE_CLIENT_ID \
     GoogleClientSecret=YOUR_GOOGLE_CLIENT_SECRET \
-    CallbackUrls=http://localhost:3000/auth/callback,https://YOUR_APP.vercel.app/auth/callback \
-    LogoutUrls=http://localhost:3000/login,https://YOUR_APP.vercel.app/login \
-    CorsAllowOrigin=http://localhost:3000,https://YOUR_APP.vercel.app
+    CallbackUrls=http://localhost:3000/auth/callback,https://gd-rag-portfolio.vercel.app/auth/callback \
+    LogoutUrls=http://localhost:3000/login,https://gd-rag-portfolio.vercel.app/login \
+    CorsAllowOrigin=http://localhost:3000,https://gd-rag-portfolio.vercel.app
 ```
 
 `CognitoDomainPrefix` must be globally unique in the region.

@@ -4,7 +4,7 @@ Next.js + Material UI frontend for GD RAG (Vercel).
 
 ## Live demo
 
-[https://gd-rag-portfolio-i3pohx75y-dinesh24srus-projects.vercel.app](https://gd-rag-portfolio-i3pohx75y-dinesh24srus-projects.vercel.app)
+[https://gd-rag-portfolio.vercel.app](https://gd-rag-portfolio.vercel.app)
 
 ## Run locally
 
@@ -38,7 +38,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `NEXT_PUBLIC_COGNITO_CLIENT_ID` | `UserPoolClientId` |
 | `NEXT_PUBLIC_COGNITO_DOMAIN` | `CognitoHostedUiDomain` |
 | `NEXT_PUBLIC_API_BASE_URL` | `ApiBaseUrl` |
-| `NEXT_PUBLIC_APP_URL` | `https://YOUR_APP.vercel.app` (no trailing slash) |
+| `NEXT_PUBLIC_APP_URL` | `https://gd-rag-portfolio.vercel.app` (no trailing slash) |
 
 4. Deploy, then copy the production URL.
 5. Redeploy the SAM stack with that URL added to `CallbackUrls`, `LogoutUrls`, and `CorsAllowOrigin` (see [`infra/README.md`](../../infra/README.md)).
