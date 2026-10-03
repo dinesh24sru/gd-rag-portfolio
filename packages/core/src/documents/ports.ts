@@ -4,6 +4,7 @@ export interface DocumentRepository {
   put(document: DocumentRecord): Promise<void>;
   get(tenantId: string, documentId: string): Promise<DocumentRecord | null>;
   listByTenant(tenantId: string, limit: number): Promise<DocumentRecord[]>;
+  delete(tenantId: string, documentId: string): Promise<void>;
 }
 
 export interface ObjectStorage {
@@ -13,4 +14,5 @@ export interface ObjectStorage {
     contentLength: number;
     expiresInSeconds: number;
   }): Promise<string>;
+  deleteObject(key: string): Promise<void>;
 }

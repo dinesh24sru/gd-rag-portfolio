@@ -21,6 +21,14 @@ export function ok(body: unknown): APIGatewayProxyResultV2 {
   return jsonResponse(200, body);
 }
 
+export function noContent(): APIGatewayProxyResultV2 {
+  return {
+    statusCode: 204,
+    headers: { ...DEFAULT_HEADERS },
+    body: "",
+  };
+}
+
 export function errorResponse(error: unknown): APIGatewayProxyResultV2 {
   if (error instanceof AppError) {
     const body: ApiErrorBody = {

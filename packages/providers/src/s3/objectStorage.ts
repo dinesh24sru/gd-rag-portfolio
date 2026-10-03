@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { ObjectStorage } from "@gd-rag/core";
 
@@ -30,6 +30,15 @@ export function createS3ObjectStorage(options: S3ObjectStorageOptions): ObjectSt
         ContentLength: params.contentLength,
       });
       return getSignedUrl(client, command, { expiresIn: params.expiresInSeconds });
+    },
+
+    async deleteObject(key) {
+      await client.send(
+        new DeleteObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+        }),
+      );
     },
   };
 }

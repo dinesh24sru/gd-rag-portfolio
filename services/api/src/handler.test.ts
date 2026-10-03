@@ -154,6 +154,9 @@ describe("handler routes", () => {
         async getDocument() {
           throw new Error("unused");
         },
+        async deleteDocument() {
+          throw new Error("unused");
+        },
       },
     });
 

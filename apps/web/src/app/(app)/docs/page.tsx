@@ -6,6 +6,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
+import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
@@ -13,8 +14,10 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import {
   createUploadUrl,
+  deleteDocument,
   isApiConfigured,
   listDocuments,
   type DocumentRecord,
@@ -22,6 +25,7 @@ import {
 import { palette } from "@/theme/theme";
 
 const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_DOCUMENTS = 5;
 
 function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error) return err.message;
@@ -60,8 +64,11 @@ export default function DocsPage() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  const atLimit = documents.length >= MAX_DOCUMENTS;
 
   const refresh = useCallback(async () => {
     if (!isApiConfigured()) {
@@ -95,6 +102,9 @@ export default function DocsPage() {
     setInfo(null);
 
     try {
+      if (documents.length >= MAX_DOCUMENTS) {
+        throw new Error(`Document limit reached (${MAX_DOCUMENTS}). Delete a file first.`);
+      }
       if (file.size > MAX_BYTES) {
         throw new Error("File exceeds the 10 MB limit.");
       }
@@ -131,6 +141,24 @@ export default function DocsPage() {
     }
   };
 
+  const onDelete = async (doc: DocumentRecord) => {
+    const okConfirm = window.confirm(`Delete “${doc.fileName}”? This removes it from storage.`);
+    if (!okConfirm) return;
+
+    setError(null);
+    setInfo(null);
+    setDeletingId(doc.documentId);
+    try {
+      await deleteDocument(doc.documentId);
+      setInfo(`Deleted “${doc.fileName}”.`);
+      await refresh();
+    } catch (err) {
+      setError(errorMessage(err, "Delete failed"));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <Stack spacing={3} sx={{ maxWidth: 820 }}>
       <Stack spacing={1}>
@@ -138,8 +166,8 @@ export default function DocsPage() {
           Doc management
         </Typography>
         <Typography color="text.secondary">
-          Upload private files with a short-lived S3 URL. Metadata is tenant-scoped; async
-          indexing comes next.
+          Upload private files with a short-lived S3 URL. Max {MAX_DOCUMENTS} files per account.
+          Delete removes the object from S3 and its DynamoDB metadata.
         </Typography>
       </Stack>
 
@@ -157,7 +185,7 @@ export default function DocsPage() {
           <CloudUploadOutlinedIcon sx={{ fontSize: 42, color: "primary.main" }} />
           <Typography variant="h6">Upload documents</Typography>
           <Typography color="text.secondary" sx={{ maxWidth: 420 }}>
-            PDF, TXT, or Markdown up to 10 MB. The browser uploads directly to private S3.
+            PDF, TXT, or Markdown up to 10 MB ({documents.length}/{MAX_DOCUMENTS} used).
           </Typography>
           <input
             ref={inputRef}
@@ -172,15 +200,18 @@ export default function DocsPage() {
               uploading ? <CircularProgress size={18} color="inherit" /> : <CloudUploadOutlinedIcon />
             }
             onClick={onPick}
-            disabled={uploading || !isApiConfigured()}
+            disabled={uploading || atLimit || !isApiConfigured() || Boolean(deletingId)}
           >
-            {uploading ? "Uploading…" : "Choose file"}
+            {uploading ? "Uploading…" : atLimit ? "Limit reached" : "Choose file"}
           </Button>
         </Stack>
       </Paper>
 
       {error && <Alert severity="error">{error}</Alert>}
       {info && <Alert severity="success">{info}</Alert>}
+      {atLimit && !error && (
+        <Alert severity="info">You have {MAX_DOCUMENTS} documents. Delete one to upload another.</Alert>
+      )}
 
       <Paper
         elevation={0}
@@ -194,7 +225,11 @@ export default function DocsPage() {
         <Stack spacing={1.5}>
           <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
             <Typography variant="h6">Your documents</Typography>
-            <Button size="small" onClick={() => void refresh()} disabled={loading || uploading}>
+            <Button
+              size="small"
+              onClick={() => void refresh()}
+              disabled={loading || uploading || Boolean(deletingId)}
+            >
               Refresh
             </Button>
           </Stack>
@@ -217,9 +252,23 @@ export default function DocsPage() {
                 <ListItem
                   key={doc.documentId}
                   secondaryAction={
-                    <Chip size="small" label={doc.status} color={statusColor(doc.status)} />
+                    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                      <Chip size="small" label={doc.status} color={statusColor(doc.status)} />
+                      <IconButton
+                        edge="end"
+                        aria-label={`Delete ${doc.fileName}`}
+                        onClick={() => void onDelete(doc)}
+                        disabled={uploading || Boolean(deletingId)}
+                      >
+                        {deletingId === doc.documentId ? (
+                          <CircularProgress size={18} />
+                        ) : (
+                          <DeleteOutlineRoundedIcon />
+                        )}
+                      </IconButton>
+                    </Stack>
                   }
-                  sx={{ px: 0 }}
+                  sx={{ px: 0, pr: 12 }}
                 >
                   <ListItemText
                     primary={doc.fileName}

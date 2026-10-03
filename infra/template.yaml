@@ -195,6 +195,7 @@ Resources:
         AllowMethods:
           - GET
           - POST
+          - DELETE
           - OPTIONS
         MaxAge: 600
       Auth:
@@ -262,6 +263,14 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /documents/{documentId}
             Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+        DeleteDocument:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /documents/{documentId}
+            Method: DELETE
             Auth:
               Authorizer: CognitoJwtAuthorizer
 

@@ -1,5 +1,6 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
+  DeleteCommand,
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
@@ -62,6 +63,15 @@ export function createDynamoDocumentRepository(
         }),
       );
       return (result.Items as DocumentRecord[] | undefined) ?? [];
+    },
+
+    async delete(tenantId: string, documentId: string): Promise<void> {
+      await client.send(
+        new DeleteCommand({
+          TableName: tableName,
+          Key: { tenantId, documentId },
+        }),
+      );
     },
   };
 }

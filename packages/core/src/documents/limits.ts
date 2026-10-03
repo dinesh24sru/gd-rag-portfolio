@@ -1,6 +1,7 @@
 /** Portfolio-sized defaults — keep S3/Bedrock costs bounded. */
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MiB
 export const PRESIGN_EXPIRES_SECONDS = 300; // 5 minutes
+export const MAX_DOCUMENTS_PER_TENANT = 5;
 export const LIST_DOCUMENTS_LIMIT = 50;
 
 export const ALLOWED_CONTENT_TYPES = [

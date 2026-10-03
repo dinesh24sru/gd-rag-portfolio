@@ -137,3 +137,9 @@ export async function getDocument(documentId: string): Promise<DocumentRecord> {
   );
   return result.document;
 }
+
+export async function deleteDocument(documentId: string): Promise<void> {
+  await apiFetch<void>(`/documents/${encodeURIComponent(documentId)}`, {
+    method: "DELETE",
+  });
+}

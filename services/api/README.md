@@ -24,8 +24,9 @@ Thin AWS Lambda handlers behind API Gateway HTTP API.
 | POST | `/documents/upload-url` | Cognito JWT | `{ document, uploadUrl, expiresInSeconds }` |
 | GET | `/documents` | Cognito JWT | `{ documents: [...] }` |
 | GET | `/documents/{documentId}` | Cognito JWT | `{ document }` |
+| DELETE | `/documents/{documentId}` | Cognito JWT | `204` (deletes S3 object + DynamoDB row) |
 
-`tenantId` is always Cognito `sub` from verified claims. Uploads: PDF / TXT / Markdown, max 10 MB; browser PUTs to the presigned S3 URL.
+`tenantId` is always Cognito `sub` from verified claims. Uploads: PDF / TXT / Markdown, max 10 MB, max 5 documents per tenant; browser PUTs to the presigned S3 URL.
 
 ## Local build
 

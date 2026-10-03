@@ -10,6 +10,7 @@ import { buildDocumentObjectKey } from "./keys";
 import {
   ALLOWED_CONTENT_TYPES,
   isAllowedContentType,
+  MAX_DOCUMENTS_PER_TENANT,
   MAX_UPLOAD_BYTES,
   PRESIGN_EXPIRES_SECONDS,
 } from "./limits";
@@ -21,6 +22,7 @@ export type CreateUploadDeps = {
   now?: () => Date;
   idFactory?: () => string;
   maxUploadBytes?: number;
+  maxDocumentsPerTenant?: number;
   presignExpiresSeconds?: number;
 };
 
@@ -55,6 +57,14 @@ export async function createUpload(
 
   if (sizeBytes > maxBytes) {
     throw new ValidationError(`File exceeds maximum size of ${maxBytes} bytes`);
+  }
+
+  const maxDocs = deps.maxDocumentsPerTenant ?? MAX_DOCUMENTS_PER_TENANT;
+  const existing = await deps.documents.listByTenant(auth.tenantId, maxDocs + 1);
+  if (existing.length >= maxDocs) {
+    throw new ValidationError(
+      `Document limit reached (${maxDocs} per account). Delete a file before uploading another.`,
+    );
   }
 
   const documentId = (deps.idFactory ?? randomUUID)();

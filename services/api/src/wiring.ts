@@ -1,5 +1,6 @@
 import {
   createUpload,
+  deleteDocument,
   getDocument,
   listDocuments,
   type CreateUploadDeps,
@@ -17,6 +18,7 @@ export type DocumentServices = {
   ) => Promise<Awaited<ReturnType<typeof createUpload>>>;
   listDocuments: (auth: AuthContext) => Promise<DocumentRecord[]>;
   getDocument: (auth: AuthContext, documentId: string) => Promise<DocumentRecord>;
+  deleteDocument: (auth: AuthContext, documentId: string) => Promise<void>;
 };
 
 export type ApiWiring = {
@@ -51,6 +53,7 @@ function buildFromEnv(): ApiWiring {
       createUpload: (auth, input) => createUpload(auth, input, deps),
       listDocuments: (auth) => listDocuments(auth, documents),
       getDocument: (auth, documentId) => getDocument(auth, documentId, documents),
+      deleteDocument: (auth, documentId) => deleteDocument(auth, documentId, deps),
     },
   };
 }

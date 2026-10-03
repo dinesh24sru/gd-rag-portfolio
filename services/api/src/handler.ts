@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { NotFoundError, ValidationError, type CreateUploadRequest } from "@gd-rag/shared";
 import { extractAuthContext } from "./auth";
-import { errorResponse, ok } from "./http";
+import { errorResponse, noContent, ok } from "./http";
 import { getApiWiring } from "./wiring";
 
 function routeKey(event: APIGatewayProxyEventV2): string {
@@ -62,6 +62,15 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
           const document = await getApiWiring().documents.getDocument(auth, documentId);
           return ok({ document });
         }
+
+        const deleteMatch = /^DELETE \/documents\/([^/]+)$/.exec(key);
+        if (deleteMatch) {
+          const auth = extractAuthContext(event);
+          const documentId = decodeURIComponent(deleteMatch[1] ?? "");
+          await getApiWiring().documents.deleteDocument(auth, documentId);
+          return noContent();
+        }
+
         throw new NotFoundError(`Route not found: ${key}`);
       }
     }

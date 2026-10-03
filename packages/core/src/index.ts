@@ -5,6 +5,7 @@ export type { DocumentRepository, ObjectStorage } from "./documents/ports";
 export {
   MAX_UPLOAD_BYTES,
   PRESIGN_EXPIRES_SECONDS,
+  MAX_DOCUMENTS_PER_TENANT,
   LIST_DOCUMENTS_LIMIT,
   ALLOWED_CONTENT_TYPES,
   isAllowedContentType,
@@ -14,3 +15,5 @@ export { createUpload } from "./documents/createUpload";
 export type { CreateUploadDeps } from "./documents/createUpload";
 export { getDocument } from "./documents/getDocument";
 export { listDocuments } from "./documents/listDocuments";
+export { deleteDocument } from "./documents/deleteDocument";
+export type { DeleteDocumentDeps } from "./documents/deleteDocument";
