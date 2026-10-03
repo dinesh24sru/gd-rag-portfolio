@@ -160,7 +160,7 @@ export default function DocsPage() {
   };
 
   return (
-    <Stack spacing={3} sx={{ maxWidth: 820 }}>
+    <Stack spacing={3} sx={{ maxWidth: 820, width: "100%" }}>
       <Stack spacing={1}>
         <Typography variant="h4" component="h1">
           Doc management
@@ -174,7 +174,7 @@ export default function DocsPage() {
       <Paper
         elevation={0}
         sx={{
-          p: 4,
+          p: { xs: 2.5, sm: 4 },
           borderRadius: 4,
           border: "1px dashed rgba(221,110,66,0.55)",
           bgcolor: palette.powder,
@@ -216,14 +216,17 @@ export default function DocsPage() {
       <Paper
         elevation={0}
         sx={{
-          p: 2.5,
+          p: { xs: 2, sm: 2.5 },
           borderRadius: 3,
           bgcolor: palette.surface,
           border: "1px solid rgba(79,109,122,0.16)",
         }}
       >
         <Stack spacing={1.5}>
-          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+          <Stack
+            direction="row"
+            sx={{ justifyContent: "space-between", alignItems: "center", gap: 1 }}
+          >
             <Typography variant="h6">Your documents</Typography>
             <Button
               size="small"
@@ -251,29 +254,53 @@ export default function DocsPage() {
               {documents.map((doc) => (
                 <ListItem
                   key={doc.documentId}
-                  secondaryAction={
-                    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                      <Chip size="small" label={doc.status} color={statusColor(doc.status)} />
-                      <IconButton
-                        edge="end"
-                        aria-label={`Delete ${doc.fileName}`}
-                        onClick={() => void onDelete(doc)}
-                        disabled={uploading || Boolean(deletingId)}
-                      >
-                        {deletingId === doc.documentId ? (
-                          <CircularProgress size={18} />
-                        ) : (
-                          <DeleteOutlineRoundedIcon />
-                        )}
-                      </IconButton>
-                    </Stack>
-                  }
-                  sx={{ px: 0, pr: 12 }}
+                  sx={{
+                    px: 0,
+                    py: 1.25,
+                    alignItems: "flex-start",
+                    borderBottom: "1px solid rgba(79,109,122,0.12)",
+                    "&:last-of-type": { borderBottom: "none" },
+                  }}
                 >
-                  <ListItemText
-                    primary={doc.fileName}
-                    secondary={`${doc.contentType} · ${(doc.sizeBytes / 1024).toFixed(1)} KB · ${new Date(doc.createdAt).toLocaleString()}`}
-                  />
+                  <Stack spacing={1} sx={{ width: "100%", minWidth: 0 }}>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{ justifyContent: "space-between", alignItems: "flex-start" }}
+                    >
+                      <ListItemText
+                        sx={{ m: 0, minWidth: 0, pr: 1 }}
+                        primary={doc.fileName}
+                        secondary={`${doc.contentType} · ${(doc.sizeBytes / 1024).toFixed(1)} KB · ${new Date(doc.createdAt).toLocaleString()}`}
+                        slotProps={{
+                          primary: {
+                            sx: {
+                              fontWeight: 700,
+                              overflowWrap: "anywhere",
+                            },
+                          },
+                          secondary: {
+                            sx: { overflowWrap: "anywhere" },
+                          },
+                        }}
+                      />
+                      <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", flexShrink: 0 }}>
+                        <Chip size="small" label={doc.status} color={statusColor(doc.status)} />
+                        <IconButton
+                          edge="end"
+                          aria-label={`Delete ${doc.fileName}`}
+                          onClick={() => void onDelete(doc)}
+                          disabled={uploading || Boolean(deletingId)}
+                        >
+                          {deletingId === doc.documentId ? (
+                            <CircularProgress size={18} />
+                          ) : (
+                            <DeleteOutlineRoundedIcon />
+                          )}
+                        </IconButton>
+                      </Stack>
+                    </Stack>
+                  </Stack>
                 </ListItem>
               ))}
             </List>

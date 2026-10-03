@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@fontsource/manrope/500.css";
 import "@fontsource/manrope/600.css";
 import "@fontsource/manrope/700.css";
@@ -9,6 +9,13 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "GD RAG",
   description: "Multi-tenant document-grounded RAG with abstention and citations.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#E8DAB2",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

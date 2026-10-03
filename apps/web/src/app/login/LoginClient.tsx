@@ -64,7 +64,8 @@ export default function LoginClient() {
           display: "flex",
           alignItems: "center",
           px: { xs: 3, sm: 5, md: 7 },
-          py: { xs: 6, md: 8 },
+          py: { xs: 5, sm: 6, md: 8 },
+          pt: { xs: "calc(env(safe-area-inset-top) + 40px)", md: 8 },
           bgcolor: palette.slate,
           color: palette.cream,
           backgroundImage:
@@ -134,7 +135,8 @@ export default function LoginClient() {
           display: "grid",
           placeItems: "center",
           px: { xs: 2.5, sm: 4 },
-          py: { xs: 5, md: 6 },
+          py: { xs: 4, sm: 5, md: 6 },
+          pb: { xs: "calc(env(safe-area-inset-bottom) + 32px)", md: 6 },
           bgcolor: palette.cream,
           backgroundImage:
             "radial-gradient(ellipse 70% 50% at 100% 0%, rgba(192,214,223,0.85), transparent 55%)",

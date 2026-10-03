@@ -1,0 +1,25 @@
+---
+description: Require phone and iPad/tablet-friendly UI for every apps/web change.
+globs:
+  - apps/web/**/*
+alwaysApply: false
+---
+
+# Frontend responsiveness
+
+`AGENTS.md` is the source of truth. Apply on every `apps/web` change.
+
+## Required
+
+* Mobile- and iPad-friendly by default — not desktop-only with a later pass.
+* Check layouts at phone (~375px), iPad portrait (~768px), and desktop.
+* Responsive spacing/typography/stacking via MUI breakpoints (`xs` / `sm` / `md`).
+* No horizontal overflow: wrap long filenames, emails, IDs, and URLs.
+* Reachable primary actions on touch screens; account for top bar, bottom tabs, and safe areas (`env(safe-area-inset-*)`, `100dvh`).
+* Compact nav on small viewports; permanent sidebar only from `md` up.
+
+## Do not
+
+* Ship fixed-width desktop rows that clip on phones.
+* Rely on hover-only controls for critical actions.
+* Ignore bottom/top chrome overlapping content on mobile.

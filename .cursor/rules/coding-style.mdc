@@ -28,3 +28,7 @@ alwaysApply: true
 * Generalize from a single call site.
 * Leave commented-out alternatives or unused dependencies.
 * Batch a whole feature vertical when a thinner next step exists.
+
+## Frontend (`apps/web`)
+
+* Keep UI phone- and iPad-friendly on every change (see `frontend-responsive.mdc` / `AGENTS.md`).

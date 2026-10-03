@@ -37,7 +37,7 @@ export default function HomePage() {
   const { user } = useAuth();
 
   return (
-    <Stack spacing={4} sx={{ maxWidth: 980 }}>
+    <Stack spacing={{ xs: 3, md: 4 }} sx={{ maxWidth: 980, width: "100%" }}>
       <Stack spacing={1.5}>
         <Chip
           label="Document-grounded RAG"
@@ -50,7 +50,7 @@ export default function HomePage() {
         <Typography
           variant="h6"
           color="text.secondary"
-          sx={{ maxWidth: 720, fontWeight: 500 }}
+          sx={{ maxWidth: 720, fontWeight: 500, fontSize: { xs: "1rem", sm: "1.15rem" } }}
         >
           GD RAG helps you upload private documents and ask questions that stay tied to
           your sources—with citations, tenant isolation, and abstention when evidence is
@@ -120,7 +120,7 @@ export default function HomePage() {
 
       <Grid container spacing={2}>
         {highlights.map((item) => (
-          <Grid key={item.title} size={{ xs: 12, md: 4 }}>
+          <Grid key={item.title} size={{ xs: 12, sm: 6, md: 4 }}>
             <Paper
               elevation={0}
               sx={{

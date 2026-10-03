@@ -46,15 +46,39 @@ export const theme = createTheme({
   },
   typography: {
     fontFamily: "'Manrope', 'Segoe UI', sans-serif",
-    h1: { fontWeight: 800, letterSpacing: "-0.03em" },
-    h2: { fontWeight: 780, letterSpacing: "-0.02em" },
-    h3: { fontWeight: 720, letterSpacing: "-0.02em" },
-    h4: { fontWeight: 700 },
+    h1: {
+      fontWeight: 800,
+      letterSpacing: "-0.03em",
+      fontSize: "clamp(2rem, 5vw, 3.25rem)",
+    },
+    h2: {
+      fontWeight: 780,
+      letterSpacing: "-0.02em",
+      fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
+    },
+    h3: {
+      fontWeight: 720,
+      letterSpacing: "-0.02em",
+      fontSize: "clamp(1.5rem, 3.5vw, 2.15rem)",
+    },
+    h4: {
+      fontWeight: 700,
+      fontSize: "clamp(1.3rem, 2.8vw, 1.75rem)",
+    },
     h5: { fontWeight: 700 },
     h6: { fontWeight: 680 },
     button: { fontWeight: 720, textTransform: "none" },
     body1: { lineHeight: 1.6 },
     body2: { lineHeight: 1.55 },
+  },
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 900,
+      lg: 1200,
+      xl: 1536,
+    },
   },
   components: {
     MuiCssBaseline: {

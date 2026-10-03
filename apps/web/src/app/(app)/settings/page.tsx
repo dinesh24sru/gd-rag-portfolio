@@ -9,7 +9,7 @@ import { palette } from "@/theme/theme";
 
 export default function SettingsPage() {
   return (
-    <Stack spacing={3} sx={{ maxWidth: 720 }}>
+    <Stack spacing={3} sx={{ maxWidth: 720, width: "100%" }}>
       <Stack spacing={1}>
         <Typography variant="h4" component="h1">
           Settings
@@ -22,7 +22,7 @@ export default function SettingsPage() {
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           borderRadius: 3,
           bgcolor: palette.surface,
           border: "1px solid rgba(79,109,122,0.16)",
@@ -32,14 +32,17 @@ export default function SettingsPage() {
           <FormControlLabel
             control={<Switch defaultChecked color="primary" />}
             label="Show citation snippets by default"
+            sx={{ alignItems: "flex-start", m: 0, gap: 1 }}
           />
           <FormControlLabel
             control={<Switch color="primary" />}
             label="Email me when ingestion finishes"
+            sx={{ alignItems: "flex-start", m: 0, gap: 1 }}
           />
           <FormControlLabel
             control={<Switch defaultChecked color="primary" />}
             label="Abstain when retrieval confidence is low"
+            sx={{ alignItems: "flex-start", m: 0, gap: 1 }}
           />
         </Stack>
       </Paper>

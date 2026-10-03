@@ -67,8 +67,10 @@ export default function ProfilePage() {
   const tenantMatches =
     apiMe && user?.sub ? apiMe.tenantId === user.sub && apiMe.sub === user.sub : null;
 
+  const idSecondarySx = { overflowWrap: "anywhere" as const, wordBreak: "break-word" as const };
+
   return (
-    <Stack spacing={3} sx={{ maxWidth: 720 }}>
+    <Stack spacing={3} sx={{ maxWidth: 720, width: "100%" }}>
       <Stack spacing={1}>
         <Typography variant="h4" component="h1">
           Profile
@@ -82,28 +84,36 @@ export default function ProfilePage() {
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           borderRadius: 3,
           bgcolor: palette.surface,
           border: "1px solid rgba(79,109,122,0.16)",
         }}
       >
-        <Stack direction="row" spacing={2} sx={{ alignItems: "center", mb: 2 }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          sx={{ alignItems: { xs: "flex-start", sm: "center" }, mb: 2 }}
+        >
           <Avatar
             sx={{
-              width: 64,
-              height: 64,
+              width: { xs: 56, sm: 64 },
+              height: { xs: 56, sm: 64 },
               bgcolor: palette.orange,
               color: palette.onAccent,
               fontWeight: 800,
-              fontSize: 28,
+              fontSize: { xs: 24, sm: 28 },
             }}
           >
             {(user?.name ?? "U").slice(0, 1).toUpperCase()}
           </Avatar>
-          <Stack spacing={0.5}>
-            <Typography variant="h6">{user?.name}</Typography>
-            <Typography color="text.secondary">{user?.email}</Typography>
+          <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+            <Typography variant="h6" sx={{ overflowWrap: "anywhere" }}>
+              {user?.name}
+            </Typography>
+            <Typography color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
+              {user?.email}
+            </Typography>
             <Chip label={`${user?.provider ?? "Google"} · Cognito`} size="small" color="primary" />
           </Stack>
         </Stack>
@@ -112,7 +122,11 @@ export default function ProfilePage() {
 
         <List dense>
           <ListItem>
-            <ListItemText primary="Cognito sub" secondary={user?.sub ?? "—"} />
+            <ListItemText
+              primary="Cognito sub"
+              secondary={user?.sub ?? "—"}
+              slotProps={{ secondary: { sx: idSecondarySx } }}
+            />
           </ListItem>
           <ListItem>
             <ListItemText primary="Identity provider" secondary={user?.provider ?? "Google"} />
@@ -121,6 +135,7 @@ export default function ProfilePage() {
             <ListItemText
               primary="Tenant (client session)"
               secondary={user?.sub ?? "— (Cognito sub)"}
+              slotProps={{ secondary: { sx: idSecondarySx } }}
             />
           </ListItem>
         </List>
@@ -129,7 +144,7 @@ export default function ProfilePage() {
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           borderRadius: 3,
           bgcolor: palette.surface,
           border: "1px solid rgba(79,109,122,0.16)",
@@ -164,13 +179,25 @@ export default function ProfilePage() {
             <>
               <List dense>
                 <ListItem>
-                  <ListItemText primary="API tenantId" secondary={apiMe.tenantId} />
+                  <ListItemText
+                    primary="API tenantId"
+                    secondary={apiMe.tenantId}
+                    slotProps={{ secondary: { sx: idSecondarySx } }}
+                  />
                 </ListItem>
                 <ListItem>
-                  <ListItemText primary="API sub" secondary={apiMe.sub} />
+                  <ListItemText
+                    primary="API sub"
+                    secondary={apiMe.sub}
+                    slotProps={{ secondary: { sx: idSecondarySx } }}
+                  />
                 </ListItem>
                 <ListItem>
-                  <ListItemText primary="API email claim" secondary={apiMe.email ?? "—"} />
+                  <ListItemText
+                    primary="API email claim"
+                    secondary={apiMe.email ?? "—"}
+                    slotProps={{ secondary: { sx: idSecondarySx } }}
+                  />
                 </ListItem>
               </List>
               {tenantMatches === true && (

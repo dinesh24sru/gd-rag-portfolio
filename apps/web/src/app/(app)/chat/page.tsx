@@ -16,12 +16,24 @@ export default function ChatPage() {
   const [draft, setDraft] = useState("");
 
   return (
-    <Stack spacing={3} sx={{ maxWidth: 900, height: { md: "calc(100vh - 64px)" } }}>
+    <Stack
+      spacing={2.5}
+      sx={{
+        maxWidth: 900,
+        width: "100%",
+        height: {
+          xs: "calc(100dvh - 56px - 72px - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 40px)",
+          sm: "calc(100dvh - 64px - 72px - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 48px)",
+          md: "calc(100dvh - 64px)",
+        },
+        minHeight: { xs: 420, md: 520 },
+      }}
+    >
       <Stack spacing={1}>
         <Typography variant="h4" component="h1">
           Chat
         </Typography>
-        <Typography color="text.secondary">
+        <Typography color="text.secondary" sx={{ fontSize: { xs: "0.95rem", sm: "1rem" } }}>
           Ask questions about your uploaded documents. Retrieval, confidence gating,
           and citations will connect here once the API is live.
         </Typography>
@@ -31,9 +43,9 @@ export default function ChatPage() {
         elevation={0}
         sx={{
           flexGrow: 1,
-          minHeight: 360,
-          p: 3,
-          borderRadius: 4,
+          minHeight: 0,
+          p: { xs: 2, sm: 3 },
+          borderRadius: { xs: 3, sm: 4 },
           bgcolor: palette.surface,
           border: "1px solid rgba(79,109,122,0.16)",
           display: "flex",
@@ -43,10 +55,12 @@ export default function ChatPage() {
         <Box
           sx={{
             flexGrow: 1,
+            minHeight: 0,
             display: "grid",
             placeItems: "center",
             textAlign: "center",
-            px: 2,
+            px: { xs: 1, sm: 2 },
+            overflow: "auto",
           }}
         >
           <Stack spacing={1} sx={{ maxWidth: 420 }}>
@@ -58,7 +72,11 @@ export default function ChatPage() {
           </Stack>
         </Box>
 
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: "stretch" }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          sx={{ alignItems: "stretch", mt: 2 }}
+        >
           <TextField
             fullWidth
             placeholder="Ask about your documents…"
@@ -69,15 +87,23 @@ export default function ChatPage() {
                 sx: {
                   bgcolor: palette.lightSurface,
                   color: palette.ink,
-                  borderRadius: 999,
+                  borderRadius: { xs: 3, sm: 999 },
                   "& fieldset": { border: "none" },
                 },
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
                       color="primary"
+                      aria-label="Send message"
                       disabled={!draft.trim()}
-                      sx={{ bgcolor: palette.orange, color: palette.onAccent }}
+                      sx={{
+                        bgcolor: palette.orange,
+                        color: palette.onAccent,
+                        "&.Mui-disabled": {
+                          bgcolor: "rgba(221,110,66,0.35)",
+                          color: palette.onAccent,
+                        },
+                      }}
                     >
                       <SendRoundedIcon />
                     </IconButton>

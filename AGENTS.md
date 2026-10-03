@@ -192,6 +192,19 @@ Write modular, reusable, simple, straightforward code. Prefer clarity over cleve
 * Avoid unused dependencies and large SDK surface area in Lambda bundles.
 * Prefer deterministic IDs, idempotent writes, and clear error types over silent retries.
 
+### Frontend responsiveness (required)
+
+Every `apps/web` UI change must stay usable on **phones and iPads/tablets**, not only desktop.
+
+* Design mobile-first; verify layouts at ~375px (phone), ~768px (iPad portrait), and desktop.
+* Use responsive spacing, typography, and stacking (`xs` / `sm` / `md` breakpoints). Prefer fluid type (`clamp`) for page titles.
+* Avoid horizontal overflow: wrap long filenames, emails, Cognito IDs, and URLs (`overflow-wrap: anywhere` / no fixed-width rows that clip).
+* Keep primary actions reachable on small screens (adequate tap targets; account for top app bar and bottom nav safe areas).
+* Respect `env(safe-area-inset-*)` and `100dvh` so notched phones and home-indicator devices do not hide chrome or content.
+* Navigation: compact patterns on small viewports (drawer + bottom tabs); permanent sidebar only from `md` up.
+* Do not ship desktop-only grids, side-by-side toolbars, or hover-only critical actions without a touch-friendly alternative.
+* When adding or changing a page/component, check that it still fits phone and iPad without horizontal scroll.
+
 ### AWS SDK and Lambda practices
 
 * Put AWS SDK usage only in `packages/providers` (or thin service wiring), not in `packages/core` or `apps/web`.
