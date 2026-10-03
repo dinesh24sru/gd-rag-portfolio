@@ -2,6 +2,10 @@
 
 Next.js + Material UI frontend for GD RAG (Vercel).
 
+## Live demo
+
+[https://gd-rag-portfolio-i3pohx75y-dinesh24srus-projects.vercel.app](https://gd-rag-portfolio-i3pohx75y-dinesh24srus-projects.vercel.app)
+
 ## Run locally
 
 ```bash

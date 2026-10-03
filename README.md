@@ -1,8 +1,14 @@
-# gd-rag-portfolio
+# GD RAG
 
 Multi-tenant, document-grounded RAG SaaS.
 
 Users upload documents and ask questions. Answers are grounded only in the authenticated tenant's documents; the system abstains when evidence is insufficient.
+
+## Live demo
+
+**App:** [https://gd-rag-portfolio-i3pohx75y-dinesh24srus-projects.vercel.app](https://gd-rag-portfolio-i3pohx75y-dinesh24srus-projects.vercel.app)
+
+Sign in with Google (Cognito Hosted UI). After login, open **Profile** to confirm API `tenantId` matches your Cognito `sub`.
 
 ## Stack
 
