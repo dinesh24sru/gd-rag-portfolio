@@ -46,7 +46,7 @@ async function parseError(response: Response): Promise<ApiClientError> {
 }
 
 /**
- * Authenticated fetch against the GroundedRAG HTTP API.
+ * Authenticated fetch against the GD RAG HTTP API.
  * Sends Cognito access token; on 401 clears local session and redirects to login.
  */
 export async function apiFetch<T>(

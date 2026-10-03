@@ -1,6 +1,6 @@
 # `apps/web`
 
-Next.js + Material UI frontend for GroundedRAG (Vercel).
+Next.js + Material UI frontend for GD RAG (Vercel).
 
 ## Run locally
 

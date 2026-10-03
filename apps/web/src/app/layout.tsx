@@ -7,7 +7,7 @@ import { AppProviders } from "@/providers/AppProviders";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "GroundedRAG",
+  title: "GD RAG",
   description: "Multi-tenant document-grounded RAG with abstention and citations.",
 };
 

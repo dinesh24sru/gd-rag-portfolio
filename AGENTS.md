@@ -145,13 +145,24 @@ Important interfaces include:
 * Do not retry permanent validation/configuration errors indefinitely.
 * Keep document processing status observable.
 
-### Cost
+### Cost (hard budget)
 
-Optimize for the initial portfolio workload.
+This is a near-zero portfolio project. Target ~$0–few dollars/month idle; **worst case ≤ $10/month**.
 
-Do not introduce infrastructure such as Kubernetes, ECS, Redis, Kafka, OpenSearch, or additional managed services unless there is a demonstrated requirement.
+Be stringent. Prefer the cheapest correct option. Do not over-allocate “just in case.”
 
-Prefer serverless, pay-per-use services.
+* Prefer pay-per-use serverless only. No always-on compute.
+* Forbidden unless architecture docs explicitly change first: EC2, ECS, EKS, RDS, Redis, Kafka, OpenSearch, NAT Gateways, VPC endpoints “for convenience,” provisioned concurrency, reserved capacity, multi-AZ extras not required for v1.
+* Lambda: smallest memory that meets latency needs (start low, e.g. 128–256 MB for API; raise only with evidence). Short timeouts. No provisioned concurrency.
+* DynamoDB: on-demand only for v1. Tight item sizes. No DAX, no global tables, no unused GSIs.
+* S3: Standard; lifecycle expire/abort incomplete multipart; Block Public Access; no Transfer Acceleration.
+* SQS: short retention appropriate to the workload; small payloads (S3 pointer pattern); conservative batch sizes.
+* API Gateway: HTTP API (not REST API). No extra stages/custom domains unless required.
+* CloudWatch: low retention (e.g. 7–14 days); avoid high-cardinality custom metrics and verbose payload logging.
+* Bedrock / LLM: smallest suitable models; hard caps on top-K, context tokens, max output tokens; per-tenant quotas; no speculative second LLM passes; abstain instead of expensive retries.
+* Qdrant: free/smallest Cloud tier; minimal dimensions/collections; delete vectors on document delete.
+* Never add caches, queues, or services that bill when idle unless required for a documented feature.
+* Before adding any AWS resource or raising memory/timeout/capacity, state the monthly cost impact and keep the stack inside the $10 worst-case budget.
 
 ## Coding Rules
 
@@ -159,11 +170,25 @@ Prefer serverless, pay-per-use services.
 * Use the monorepo workspace packages; do not create separate repos for frontend, API, worker, or providers.
 * Keep business logic separate from AWS handlers (`packages/core`, not `services/*`).
 * Keep infrastructure code separate from domain/application logic (`infra` vs `packages/*`).
-* Prefer small, testable functions.
-* Validate external input at system boundaries.
+* Prefer small, testable, pure functions; explicit types at boundaries; fail fast on invalid input.
+* Validate external input at system boundaries; never trust client `tenantId` or file metadata alone.
 * Do not duplicate tenant authorization logic across handlers; centralize it in `packages/core`.
 * Do not hard-code credentials, tenant IDs, AWS regions, model IDs, or environment-specific configuration.
 * Add tests for security-sensitive and RAG-critical behavior.
+* Avoid premature abstractions, unused dependencies, and large SDK surface area in Lambda bundles.
+* Prefer deterministic IDs, idempotent writes, and clear error types over silent retries.
+
+### AWS SDK and Lambda practices
+
+* Put AWS SDK usage only in `packages/providers` (or thin service wiring), not in `packages/core` or `apps/web`.
+* Use AWS SDK v3 modular clients (`@aws-sdk/client-*`). Import only the clients/commands you need.
+* Reuse clients across invocations (initialize outside the handler) to limit cold-start and connection churn.
+* Prefer temporary credentials from the Lambda execution role; never ship long-lived access keys in code or env for app runtime.
+* Use least-privilege IAM (per function, per action, per resource). No `*` actions/resources unless unavoidable and documented.
+* Prefer freeless patterns: S3 presigned PUT from the client; DynamoDB single-table or few tables with careful keys; SQS event source mapping with modest batch size and partial batch failure when needed.
+* Bound all retries (SDK max attempts + application backoff). Do not retry validation/auth errors.
+* Set explicit timeouts on Bedrock and HTTP calls; keep Lambda timeout only slightly above the longest bounded downstream call.
+* Bundle with esbuild/tree-shaking; exclude AWS SDK from browsers; keep Lambda artifacts small.
 
 ## Change Discipline
 

@@ -24,10 +24,7 @@ await esbuild.build({
   },
 });
 
-const { writeFileSync } = await import("node:fs");
-writeFileSync(
-  join(dirname(outfile), "package.json"),
-  JSON.stringify({ name: "@gd-rag/api-bundle", private: true, main: "handler.js" }, null, 2),
-);
+// Do not write package.json into dist: SAM would run npm pack and fail.
+// The esbuild output is a single self-contained handler.js.
 
 console.log(`Built API handler → ${outfile}`);

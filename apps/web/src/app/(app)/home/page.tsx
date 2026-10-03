@@ -52,9 +52,9 @@ export default function HomePage() {
           color="text.secondary"
           sx={{ maxWidth: 720, fontWeight: 500 }}
         >
-          GroundedRAG helps you upload private documents and ask questions that stay
-          tied to your sources—with citations, tenant isolation, and abstention when
-          evidence is missing.
+          GD RAG helps you upload private documents and ask questions that stay tied to
+          your sources—with citations, tenant isolation, and abstention when evidence is
+          missing.
         </Typography>
       </Stack>
 

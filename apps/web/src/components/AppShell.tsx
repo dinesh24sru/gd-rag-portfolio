@@ -102,7 +102,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </Box>
         <Box>
           <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
-            GroundedRAG
+            GD RAG
           </Typography>
           <Typography variant="caption" color="text.secondary">
             Document-grounded answers
@@ -180,7 +180,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <MenuRoundedIcon />
           </IconButton>
           <Typography variant="h6" sx={{ ml: 1, fontWeight: 800 }}>
-            GroundedRAG
+            GD RAG
           </Typography>
         </Toolbar>
       )}

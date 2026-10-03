@@ -43,7 +43,7 @@ export function storePkceSession(params: {
   sessionStorage.setItem(POST_LOGIN_NEXT_KEY, params.nextPath);
 }
 
-export function consumePkceSession(): {
+export function peekPkceSession(): {
   verifier: string;
   state: string;
   nextPath: string;
@@ -52,13 +52,16 @@ export function consumePkceSession(): {
   const state = sessionStorage.getItem(OAUTH_STATE_KEY);
   const nextPath = sessionStorage.getItem(POST_LOGIN_NEXT_KEY) || "/home";
 
-  sessionStorage.removeItem(PKCE_VERIFIER_KEY);
-  sessionStorage.removeItem(OAUTH_STATE_KEY);
-  sessionStorage.removeItem(POST_LOGIN_NEXT_KEY);
-
   if (!verifier || !state) {
     return null;
   }
 
   return { verifier, state, nextPath };
+}
+
+/** Clear PKCE material only after a successful token exchange. */
+export function clearPkceSession(): void {
+  sessionStorage.removeItem(PKCE_VERIFIER_KEY);
+  sessionStorage.removeItem(OAUTH_STATE_KEY);
+  sessionStorage.removeItem(POST_LOGIN_NEXT_KEY);
 }

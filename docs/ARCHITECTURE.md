@@ -469,29 +469,34 @@ Required controls:
 
 ## 14. Cost Strategy
 
-Initial architecture intentionally uses serverless/pay-per-use infrastructure.
+Hard budget: near-zero idle cost; **worst case ≤ $10/month**. This is a portfolio workload, not a scale-out production estate.
 
-Avoid adding:
+Use serverless/pay-per-use only. Be stringent on memory, timeouts, retention, model size, and any always-on or provisioned feature.
 
-* EC2
-* ECS
-* EKS
-* RDS
-* Redis
-* Kafka
-* OpenSearch
+Avoid adding unless architecture docs are updated first:
 
-unless a demonstrated requirement justifies them.
+* EC2, ECS, EKS, RDS, Redis, Kafka, OpenSearch
+* NAT Gateways / convenience VPC networking
+* Provisioned concurrency, reserved capacity, DAX, global tables
 
-Primary variable cost is expected to come from LLM usage rather than Lambda/API infrastructure at low request volumes.
+Default allocations:
 
-Control LLM cost through:
+* Lambda API: start 128–256 MB, short timeout
+* DynamoDB: on-demand
+* S3: Block Public Access + lifecycle rules
+* API Gateway: HTTP API
+* CloudWatch logs: short retention (7–14 days)
 
+Primary variable cost is LLM/embeddings (Bedrock) and any vector tier — not Lambda/API at low volume.
+
+Control model cost through:
+
+* smallest suitable Bedrock models;
 * limited retrieval top-K;
 * bounded context size;
 * output token limits;
 * per-tenant quotas;
-* optional response caching;
+* abstention instead of speculative retries;
 * avoiding unnecessary second-pass LLM calls.
 
 ---

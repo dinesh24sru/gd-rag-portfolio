@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -15,6 +15,7 @@ function AuthCallbackInner() {
   const router = useRouter();
   const { refreshSession } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const startedCodeRef = useRef<string | null>(null);
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -31,6 +32,12 @@ function AuthCallbackInner() {
       setError("Missing authorization code. Try signing in again.");
       return;
     }
+
+    // Avoid duplicate work when deps churn; Strict Mode remount is handled in cognito.ts.
+    if (startedCodeRef.current === code) {
+      return;
+    }
+    startedCodeRef.current = code;
 
     let cancelled = false;
 

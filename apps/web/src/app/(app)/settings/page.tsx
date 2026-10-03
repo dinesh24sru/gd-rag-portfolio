@@ -15,7 +15,7 @@ export default function SettingsPage() {
           Settings
         </Typography>
         <Typography color="text.secondary">
-          Workspace preferences for GroundedRAG. Values are local placeholders for now.
+          Workspace preferences for GD RAG. Values are local placeholders for now.
         </Typography>
       </Stack>
 

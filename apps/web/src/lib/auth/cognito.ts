@@ -1,8 +1,9 @@
 import { getCognitoConfig } from "@/lib/auth/config";
 import {
-  consumePkceSession,
+  clearPkceSession,
   createOAuthState,
   createPkceChallenge,
+  peekPkceSession,
   storePkceSession,
 } from "@/lib/auth/pkce";
 import {
@@ -53,6 +54,12 @@ export async function beginGoogleSignIn(nextPath = "/home"): Promise<void> {
   window.location.assign(`https://${config.domain}/oauth2/authorize?${params.toString()}`);
 }
 
+/** Dedupes React Strict Mode double-mount on /auth/callback. */
+const inflightExchanges = new Map<
+  string,
+  Promise<{ user: CognitoUser; nextPath: string }>
+>();
+
 /**
  * Exchange authorization code for tokens after Cognito redirects to /auth/callback.
  */
@@ -60,51 +67,70 @@ export async function completeSignInFromCallback(params: {
   code: string;
   state: string;
 }): Promise<{ user: CognitoUser; nextPath: string }> {
-  const config = getCognitoConfig();
-  const pkce = consumePkceSession();
-
-  if (!pkce) {
-    throw new Error("Missing PKCE session. Start sign-in again from the login page.");
+  const existing = inflightExchanges.get(params.code);
+  if (existing) {
+    return existing;
   }
 
-  if (pkce.state !== params.state) {
-    throw new Error("OAuth state mismatch. Start sign-in again.");
+  const exchange = (async () => {
+    const config = getCognitoConfig();
+    const pkce = peekPkceSession();
+
+    if (!pkce) {
+      const stored = getStoredSession();
+      if (stored?.user) {
+        return { user: stored.user, nextPath: "/home" };
+      }
+      throw new Error("Missing PKCE session. Start sign-in again from the login page.");
+    }
+
+    if (pkce.state !== params.state) {
+      throw new Error("OAuth state mismatch. Start sign-in again.");
+    }
+
+    const body = new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: config.clientId,
+      code: params.code,
+      redirect_uri: config.redirectUri,
+      code_verifier: pkce.verifier,
+    });
+
+    const response = await fetch(`https://${config.domain}/oauth2/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Token exchange failed (${response.status}): ${detail}`);
+    }
+
+    const tokens = (await response.json()) as TokenResponse;
+    const user = userFromIdToken(tokens.id_token);
+
+    const session: CognitoSession = {
+      user,
+      idToken: tokens.id_token,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresAt: Date.now() + tokens.expires_in * 1000,
+    };
+
+    saveSession(session);
+    clearPkceSession();
+    return { user, nextPath: pkce.nextPath };
+  })();
+
+  inflightExchanges.set(params.code, exchange);
+  try {
+    return await exchange;
+  } finally {
+    inflightExchanges.delete(params.code);
   }
-
-  const body = new URLSearchParams({
-    grant_type: "authorization_code",
-    client_id: config.clientId,
-    code: params.code,
-    redirect_uri: config.redirectUri,
-    code_verifier: pkce.verifier,
-  });
-
-  const response = await fetch(`https://${config.domain}/oauth2/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body,
-  });
-
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Token exchange failed (${response.status}): ${detail}`);
-  }
-
-  const tokens = (await response.json()) as TokenResponse;
-  const user = userFromIdToken(tokens.id_token);
-
-  const session: CognitoSession = {
-    user,
-    idToken: tokens.id_token,
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token,
-    expiresAt: Date.now() + tokens.expires_in * 1000,
-  };
-
-  saveSession(session);
-  return { user, nextPath: pkce.nextPath };
 }
 
 export function getStoredCognitoSession(): CognitoUser | null {

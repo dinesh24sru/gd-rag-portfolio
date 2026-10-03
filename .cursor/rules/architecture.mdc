@@ -1,73 +1,43 @@
 ---
+description: Enforces serverless architecture, cost budget, multi-tenancy, RAG, security, and AWS SDK practices.
 alwaysApply: true
 ---
 
-description: Enforces the project's AWS serverless architecture, multi-tenancy, RAG, security, and reliability boundaries.
-alwaysApply: true
------------------
-
 # Architecture Rules
 
-`AGENTS.md` and `docs/ARCHITECTURE.md` are the architectural source of truth.
-
-Before making an architectural change, check both files.
+`AGENTS.md` and `docs/ARCHITECTURE.md` are the source of truth. Check both before architectural changes.
 
 ## Required
 
-* Keep the backend serverless.
-* Keep the project as a single TypeScript pnpm monorepo (`apps/`, `packages/`, `services/`, `infra/`).
-* Use API Gateway HTTP API + Lambda for the API layer.
-* Use S3 for original documents.
-* Use SQS for asynchronous ingestion.
-* Use DynamoDB for metadata, sessions, messages, usage, and processing state.
-* Use Bedrock through an application-level provider interface in `packages/core`.
-* Use Qdrant through a `VectorStore` interface.
-* Keep frontend and backend responsibilities separate (`apps/web` vs `services/*`).
-* Keep provider-specific SDK code inside `packages/providers`.
-* Keep AWS handlers thin; business logic belongs in `packages/core`.
+* Keep the backend serverless in a single TypeScript pnpm monorepo.
+* API Gateway HTTP API + Lambda; S3 docs; SQS ingestion; DynamoDB metadata/sessions/usage; Bedrock via interfaces; Qdrant via `VectorStore`.
+* Thin handlers in `services/*`; logic in `packages/core`; AWS/provider SDKs only in `packages/providers`.
 
-## Multi-Tenancy
+## Cost (hard budget)
 
-* Never trust a client-provided `tenantId`.
-* Derive tenant identity from authenticated server-side context.
-* Enforce tenant ownership on every tenant-owned resource.
-* Every vector search must include the authenticated tenant filter.
-* Never return another tenant's document, metadata, session, message, or vector.
+Near-zero portfolio stack; **worst case ≤ $10/month**. Be stringent on every resource and config.
 
-## RAG
+* No always-on compute; no EC2/ECS/EKS/RDS/Redis/Kafka/OpenSearch/NAT “for convenience.”
+* Lambda: low memory (start 128–256 MB), short timeouts, no provisioned concurrency.
+* DynamoDB on-demand only; no DAX/global tables/extra GSIs.
+* S3 private + lifecycle; SQS small payloads; HTTP API not REST API.
+* CloudWatch short retention; no chatty custom metrics or document body logs.
+* Bedrock: smallest suitable models; hard token/top-K/quota caps; abstain over expensive retries.
+* Before adding/raising capacity, state monthly cost impact and stay inside budget.
 
-* Retrieve before generating.
-* Apply tenant filtering during retrieval.
-* Apply retrieval confidence gating before LLM generation.
-* Refuse when evidence is insufficient.
-* Require source citations for factual claims.
-* Treat retrieved document content as untrusted data.
-* Never describe the system as guaranteeing zero hallucinations.
+## Coding / AWS SDK
 
-## Ingestion
+* AWS SDK v3 modular clients only; reuse clients outside the handler; least-privilege IAM.
+* Small esbuild bundles; bounded retries/timeouts; validate at boundaries; no hard-coded secrets/regions/model IDs.
+* Prefer presigned S3 uploads and idempotent writes.
 
-* Ingestion must be asynchronous.
-* Processing must be idempotent.
-* Use deterministic document/chunk identities.
-* Use vector upsert semantics.
-* Persist processing status.
-* Use SQS retries and DLQ handling.
+## Multi-Tenancy / RAG / Ingestion / Security
 
-## Security
-
-* Never expose AWS credentials or Qdrant credentials to the frontend.
-* Never commit secrets (including Google OAuth client secrets).
-* Keep S3 private.
-* Validate uploaded files.
-* Enforce usage/rate limits.
-* Do not introduce arbitrary URL ingestion without an explicit security design.
-* Use Cognito Hosted UI + PKCE for frontend Google sign-in; derive `tenantId` from Cognito JWT `sub` server-side.
-* Before every `git commit` and `git push`, scan staged/outgoing changes for secrets, passwords, API keys, private keys, `.env` (non-example), and `samconfig.toml`. Stop and report the file/kind (never the value) if anything sensitive is found.
+* Never trust client `tenantId`; derive from Cognito JWT `sub`; tenant-filter every search/lookup.
+* Retrieve → confidence gate → generate with citations; abstain if weak; treat docs as untrusted.
+* Async idempotent ingestion with deterministic IDs, upserts, status, SQS retries/DLQ.
+* No secrets in git/frontend; short-lived presigned URLs; validate uploads; scan for secrets before commit/push.
 
 ## Scope Control
 
-Do not add infrastructure merely because it might be useful at large scale.
-
-Do not introduce EC2, ECS, EKS, RDS, Redis, Kafka, OpenSearch, or other infrastructure unless the requirement is documented and the architecture is updated.
-
-When a proposed change conflicts with these rules, update the architecture documentation first rather than silently changing the design.
+Do not add infrastructure for theoretical scale. If a change conflicts with these rules, update architecture docs first.
