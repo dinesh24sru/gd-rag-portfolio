@@ -7,6 +7,27 @@ export type MeResponse = {
   email: string | null;
 };
 
+export type DocumentStatus = "PENDING" | "PROCESSING" | "READY" | "FAILED";
+
+export type DocumentRecord = {
+  tenantId: string;
+  documentId: string;
+  version: number;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  status: DocumentStatus;
+  s3Key: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateUploadUrlResponse = {
+  document: DocumentRecord;
+  uploadUrl: string;
+  expiresInSeconds: number;
+};
+
 export type ApiClientError = {
   status: number;
   code?: string;
@@ -91,4 +112,28 @@ export async function apiFetch<T>(
 
 export async function fetchMe(): Promise<MeResponse> {
   return apiFetch<MeResponse>("/me");
+}
+
+export async function createUploadUrl(input: {
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+}): Promise<CreateUploadUrlResponse> {
+  return apiFetch<CreateUploadUrlResponse>("/documents/upload-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function listDocuments(): Promise<DocumentRecord[]> {
+  const result = await apiFetch<{ documents: DocumentRecord[] }>("/documents");
+  return result.documents;
+}
+
+export async function getDocument(documentId: string): Promise<DocumentRecord> {
+  const result = await apiFetch<{ document: DocumentRecord }>(
+    `/documents/${encodeURIComponent(documentId)}`,
+  );
+  return result.document;
 }

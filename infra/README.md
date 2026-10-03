@@ -11,7 +11,9 @@ Resources in [`template.yaml`](template.yaml):
 * Public app client (Authorization Code + PKCE)
 * Hosted UI domain
 * HTTP API with Cognito JWT authorizer
-* API Lambda (`GET /health` public, `GET /me` JWT-protected)
+* API Lambda (`GET /health`, `GET /me`, document upload routes)
+* Private S3 bucket for originals (Block Public Access + abort incomplete multipart)
+* DynamoDB documents table (on-demand)
 
 ## Prerequisites
 
@@ -109,6 +111,24 @@ Notes:
 * API Gateway validates the JWT; Lambda derives `tenantId` from claim `sub` only.
 * Cognito access tokens often omit `email`; that field may be `null` on `/me`.
 * Unauthenticated `GET /me` returns `401`.
+
+## Troubleshooting: AWS CLI SSL in Cursor (Windows + Avast)
+
+If `aws` works in a normal PowerShell but fails in Cursor with `CERTIFICATE_VERIFY_FAILED` / `unable to get local issuer certificate`, Avast (or similar) HTTPS scanning is intercepting TLS. AWS CLI uses its own CA bundle and does not trust the Avast root by default.
+
+Fix (already applied on this machine if you followed setup): export **Avast Web/Mail Shield Root** to a PEM, append it to AWS CLI’s `cacert.pem`, and set a user env var:
+
+```powershell
+# Example path after creating the combined bundle:
+# [Environment]::SetEnvironmentVariable("AWS_CA_BUNDLE", "$env:USERPROFILE\.aws\aws-ca-bundle-with-avast.pem", "User")
+```
+
+Restart Cursor after setting `AWS_CA_BUNDLE` so agent terminals inherit it. Confirm with:
+
+```powershell
+$env:AWS_PROFILE = "local"
+aws sts get-caller-identity
+```
 
 ## Rules
 

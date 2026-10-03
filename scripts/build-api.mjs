@@ -18,9 +18,16 @@ await esbuild.build({
   format: "cjs",
   outfile,
   sourcemap: true,
+  absWorkingDir: root,
+  nodePaths: [
+    join(root, "packages/providers/node_modules"),
+    join(root, "services/api/node_modules"),
+    join(root, "node_modules"),
+  ],
   alias: {
     "@gd-rag/core": join(root, "packages/core/src/index.ts"),
     "@gd-rag/shared": join(root, "packages/shared/src/index.ts"),
+    "@gd-rag/providers": join(root, "packages/providers/src/index.ts"),
   },
 });
 

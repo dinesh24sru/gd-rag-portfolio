@@ -21,3 +21,8 @@ Place source under `src/` when implementation begins.
 
 * `createAuthContextFromClaims` — maps verified JWT claims to `AuthContext` with `tenantId = sub`
 * `assertSameTenant` — blocks cross-tenant resource access
+
+## Document upload
+
+* `createUpload` — validate type/size, persist `PENDING` metadata, return presigned PUT target
+* `listDocuments` / `getDocument` — tenant-scoped reads via `DocumentRepository`

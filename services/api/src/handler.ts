@@ -1,7 +1,8 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyHandlerV2 } from "aws-lambda";
-import { NotFoundError } from "@gd-rag/shared";
+import { NotFoundError, ValidationError, type CreateUploadRequest } from "@gd-rag/shared";
 import { extractAuthContext } from "./auth";
 import { errorResponse, ok } from "./http";
+import { getApiWiring } from "./wiring";
 
 function routeKey(event: APIGatewayProxyEventV2): string {
   const method = event.requestContext.http.method.toUpperCase();
@@ -9,9 +10,25 @@ function routeKey(event: APIGatewayProxyEventV2): string {
   return `${method} ${path}`;
 }
 
+function parseJsonBody<T>(event: APIGatewayProxyEventV2): T {
+  if (!event.body) {
+    throw new ValidationError("Request body is required");
+  }
+  const raw = event.isBase64Encoded
+    ? Buffer.from(event.body, "base64").toString("utf8")
+    : event.body;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    throw new ValidationError("Request body must be valid JSON");
+  }
+}
+
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   try {
-    switch (routeKey(event)) {
+    const key = routeKey(event);
+
+    switch (key) {
       case "GET /health":
         return ok({ ok: true });
 
@@ -24,8 +41,29 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         });
       }
 
-      default:
-        throw new NotFoundError(`Route not found: ${routeKey(event)}`);
+      case "POST /documents/upload-url": {
+        const auth = extractAuthContext(event);
+        const body = parseJsonBody<CreateUploadRequest>(event);
+        const result = await getApiWiring().documents.createUpload(auth, body);
+        return ok(result);
+      }
+
+      case "GET /documents": {
+        const auth = extractAuthContext(event);
+        const documents = await getApiWiring().documents.listDocuments(auth);
+        return ok({ documents });
+      }
+
+      default: {
+        const getMatch = /^GET \/documents\/([^/]+)$/.exec(key);
+        if (getMatch) {
+          const auth = extractAuthContext(event);
+          const documentId = decodeURIComponent(getMatch[1] ?? "");
+          const document = await getApiWiring().documents.getDocument(auth, documentId);
+          return ok({ document });
+        }
+        throw new NotFoundError(`Route not found: ${key}`);
+      }
     }
   } catch (error) {
     return errorResponse(error);

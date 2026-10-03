@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@gd-rag/core": "file:../../packages/core",
+    "@gd-rag/providers": "file:../../packages/providers",
     "@gd-rag/shared": "file:../../packages/shared",
     "gd-rag-portfolio": "file:../.."
   },

@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: GroundedRAG Cognito auth (Google IdP + Hosted UI) and HTTP API with JWT authorizer.
+Description: GD RAG Cognito auth, HTTP API, private document bucket, and documents table.
 
 Globals:
   Function:
@@ -40,7 +40,7 @@ Parameters:
   CorsAllowOrigin:
     Type: CommaDelimitedList
     Default: http://localhost:3000
-    Description: Allowed CORS origins for the HTTP API (comma-separated; include localhost and Vercel).
+    Description: Allowed CORS origins for the HTTP API and S3 uploads (comma-separated).
 
 Resources:
   UserPool:
@@ -129,6 +129,60 @@ Resources:
       Domain: !Ref CognitoDomainPrefix
       UserPoolId: !Ref UserPool
 
+  DocumentsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: !Ref CorsAllowOrigin
+            AllowedMethods:
+              - PUT
+              - HEAD
+              - GET
+            AllowedHeaders:
+              - Content-Type
+              - Content-Length
+              - x-amz-content-sha256
+              - x-amz-date
+              - x-amz-security-token
+              - x-amz-user-agent
+              - Authorization
+            ExposedHeaders:
+              - ETag
+              - x-amz-request-id
+              - x-amz-id-2
+            MaxAge: 3000
+
+  DocumentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: tenantId
+          AttributeType: S
+        - AttributeName: documentId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: tenantId
+          KeyType: HASH
+        - AttributeName: documentId
+          KeyType: RANGE
+
   HttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -140,6 +194,7 @@ Resources:
           - Content-Type
         AllowMethods:
           - GET
+          - POST
           - OPTIONS
         MaxAge: 600
       Auth:
@@ -158,7 +213,16 @@ Resources:
       FunctionName: !Sub "${AWS::StackName}-api"
       CodeUri: ../services/api/dist/
       Handler: handler.handler
-      Description: GroundedRAG HTTP API (auth smoke endpoints)
+      Description: GD RAG HTTP API (auth + document upload)
+      Environment:
+        Variables:
+          DOCUMENTS_TABLE_NAME: !Ref DocumentsTable
+          DOCUMENTS_BUCKET_NAME: !Ref DocumentsBucket
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DocumentsTable
+        - S3CrudPolicy:
+            BucketName: !Ref DocumentsBucket
       Events:
         Health:
           Type: HttpApi
@@ -173,6 +237,30 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /me
+            Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+        CreateUploadUrl:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /documents/upload-url
+            Method: POST
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+        ListDocuments:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /documents
+            Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+        GetDocument:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /documents/{documentId}
             Method: GET
             Auth:
               Authorizer: CognitoJwtAuthorizer
@@ -209,6 +297,14 @@ Outputs:
   ApiBaseUrl:
     Description: HTTP API base URL (no trailing slash)
     Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+
+  DocumentsBucketName:
+    Description: Private S3 bucket for original tenant documents
+    Value: !Ref DocumentsBucket
+
+  DocumentsTableName:
+    Description: DynamoDB table for document metadata
+    Value: !Ref DocumentsTable
 
   Region:
     Description: AWS region of this stack
