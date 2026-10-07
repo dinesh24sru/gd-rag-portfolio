@@ -108,6 +108,7 @@ or
 * Treat document content as untrusted input.
 * Protect against prompt injection from retrieved documents.
 * Enforce per-tenant usage/rate limits.
+* Chat LLM tokens: hard monthly quota per tenant (default **50,000** tokens / UTC month via `CHAT_TOKEN_QUOTA_MONTHLY`). Gemini free-tier RPM/RPD are **shared per API project**, so tenant quotas protect the shared pool. Count chat LLM tokens only (not ingestion embeddings). Expose used/quota/remaining via `GET /usage`; enforce before LLM; increment after each ask.
 
 ### Observability / logging (required)
 
@@ -119,6 +120,7 @@ Use `logInfo` / `logWarn` / `logError` from `@gd-rag/shared` (structured `event`
 * `upload.*` — create upload / duplicate reject (`packages/core` documents)
 * `ingest.*` — SQS batch + each pipeline step (`services/ingestion-worker`, `packages/core` ingestion)
 * `delete.*` — Qdrant → S3 → DynamoDB steps (`packages/core` delete)
+* `usage.*` — chat quota check / reject / increment (`packages/core` usage)
 * Add matching prefixes for new domains (e.g. `rag.*`, `chat.*`) when those flows land
 
 **Where to log (wherever applicable):**

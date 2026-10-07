@@ -1,4 +1,5 @@
 import type { ApiErrorCode } from "./auth";
+import type { ChatUsageSnapshot } from "./usage";
 
 export class AppError extends Error {
   readonly code: ApiErrorCode;
@@ -37,6 +38,17 @@ export class ValidationError extends AppError {
   constructor(message = "Invalid request") {
     super("BAD_REQUEST", message, 400);
     this.name = "ValidationError";
+  }
+}
+
+/** Tenant chat token quota exhausted for the current period. */
+export class QuotaExceededError extends AppError {
+  readonly usage: ChatUsageSnapshot;
+
+  constructor(message: string, usage: ChatUsageSnapshot) {
+    super("QUOTA_EXCEEDED", message, 429);
+    this.name = "QuotaExceededError";
+    this.usage = usage;
   }
 }
 

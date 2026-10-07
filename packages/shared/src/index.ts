@@ -5,6 +5,7 @@ export {
   ForbiddenError,
   NotFoundError,
   ValidationError,
+  QuotaExceededError,
   PermanentIngestionError,
 } from "./errors";
 export type {
@@ -13,4 +14,5 @@ export type {
   CreateUploadRequest,
   CreateUploadResponse,
 } from "./documents";
+export type { ChatUsageSnapshot, GetUsageResponse } from "./usage";
 export { logInfo, logWarn, logError } from "./log";

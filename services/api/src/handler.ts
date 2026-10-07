@@ -75,6 +75,19 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         return ok({ documents });
       }
 
+      case "GET /usage": {
+        const auth = extractAuthContext(event);
+        const usage = await getApiWiring().usage.getUsage(auth);
+        logInfo("api.get_usage", {
+          tenantId: auth.tenantId,
+          period: usage.period,
+          used: usage.usedTokens,
+          quota: usage.quotaTokens,
+          remaining: usage.remainingTokens,
+        });
+        return ok(usage);
+      }
+
       default: {
         const getMatch = /^GET \/documents\/([^/]+)$/.exec(key);
         if (getMatch) {

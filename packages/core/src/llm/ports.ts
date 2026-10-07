@@ -6,8 +6,16 @@ export type LLMRequest = {
   maxOutputTokens?: number;
 };
 
+export type LLMTokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+};
+
 export type LLMResponse = {
   text: string;
+  /** Provider-reported or estimated token usage for quota accounting. */
+  usage?: LLMTokenUsage;
 };
 
 export interface LLMProvider {

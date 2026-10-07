@@ -127,6 +127,83 @@ describe("handler routes", () => {
     setApiWiringForTests(undefined);
   });
 
+  it("GET /usage returns monthly chat token snapshot", async () => {
+    setApiWiringForTests({
+      documents: {
+        async createUpload() {
+          throw new Error("unused");
+        },
+        async listDocuments() {
+          return [];
+        },
+        async getDocument() {
+          throw new Error("unused");
+        },
+        async deleteDocument() {
+          throw new Error("unused");
+        },
+      },
+      usage: {
+        async getUsage() {
+          return {
+            period: "2026-10",
+            usedTokens: 120,
+            quotaTokens: 50_000,
+            remainingTokens: 49_880,
+          };
+        },
+        async assertQuota() {
+          throw new Error("unused");
+        },
+        async recordTokens() {
+          throw new Error("unused");
+        },
+        async withQuota() {
+          throw new Error("unused");
+        },
+      },
+    });
+
+    const result = (await handler(
+      baseEvent({
+        rawPath: "/usage",
+        requestContext: {
+          accountId: "123",
+          apiId: "api",
+          domainName: "example.execute-api.us-east-1.amazonaws.com",
+          domainPrefix: "example",
+          http: {
+            method: "GET",
+            path: "/usage",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "test",
+          },
+          requestId: "req",
+          routeKey: "GET /usage",
+          stage: "$default",
+          time: "01/Jan/2026:00:00:00 +0000",
+          timeEpoch: 0,
+          authorizer: {
+            jwt: {
+              claims: { sub: "tenant-xyz" },
+            },
+          },
+        },
+      }),
+      {} as never,
+      () => undefined,
+    )) as APIGatewayProxyStructuredResultV2;
+
+    assert.equal(result.statusCode, 200);
+    assert.deepEqual(JSON.parse(result.body ?? "{}"), {
+      period: "2026-10",
+      usedTokens: 120,
+      quotaTokens: 50_000,
+      remainingTokens: 49_880,
+    });
+  });
+
   it("POST /documents/upload-url returns document and upload URL", async () => {
     setApiWiringForTests({
       documents: {
@@ -156,6 +233,20 @@ describe("handler routes", () => {
           throw new Error("unused");
         },
         async deleteDocument() {
+          throw new Error("unused");
+        },
+      },
+      usage: {
+        async getUsage() {
+          throw new Error("unused");
+        },
+        async assertQuota() {
+          throw new Error("unused");
+        },
+        async recordTokens() {
+          throw new Error("unused");
+        },
+        async withQuota() {
           throw new Error("unused");
         },
       },

@@ -4,16 +4,105 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
+import LinearProgress from "@mui/material/LinearProgress";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  fetchUsage,
+  isApiConfigured,
+  type ChatUsageSnapshot,
+  type ApiClientError,
+} from "@/lib/api/client";
 import { palette } from "@/theme/theme";
+
+function formatTokens(n: number): string {
+  return n.toLocaleString();
+}
+
+function QuotaBar({ usage }: { usage: ChatUsageSnapshot }) {
+  const pct =
+    usage.quotaTokens > 0
+      ? Math.min(100, Math.round((usage.usedTokens / usage.quotaTokens) * 100))
+      : 0;
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: { xs: 1.5, sm: 2 },
+        borderRadius: { xs: 2, sm: 3 },
+        bgcolor: palette.surface,
+        border: "1px solid rgba(79,109,122,0.16)",
+      }}
+    >
+      <Stack spacing={1}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={0.5}
+          sx={{ justifyContent: "space-between", alignItems: { sm: "baseline" } }}
+        >
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            Chat tokens ({usage.period} UTC)
+          </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ overflowWrap: "anywhere" }}
+          >
+            {formatTokens(usage.usedTokens)} / {formatTokens(usage.quotaTokens)} used ·{" "}
+            {formatTokens(usage.remainingTokens)} left
+          </Typography>
+        </Stack>
+        <LinearProgress
+          variant="determinate"
+          value={pct}
+          aria-label="Chat token usage"
+          sx={{
+            height: 8,
+            borderRadius: 999,
+            bgcolor: "rgba(79,109,122,0.12)",
+            "& .MuiLinearProgress-bar": {
+              bgcolor: usage.remainingTokens === 0 ? palette.orange : palette.teal,
+            },
+          }}
+        />
+      </Stack>
+    </Paper>
+  );
+}
 
 export default function ChatPage() {
   const [draft, setDraft] = useState("");
+  const [usage, setUsage] = useState<ChatUsageSnapshot | null>(null);
+  const [usageError, setUsageError] = useState<string | null>(null);
+  const [usageLoading, setUsageLoading] = useState(true);
+
+  const refreshUsage = useCallback(async () => {
+    if (!isApiConfigured()) {
+      setUsageError("API is not configured.");
+      setUsageLoading(false);
+      return;
+    }
+    try {
+      setUsageError(null);
+      const next = await fetchUsage();
+      setUsage(next);
+    } catch (err) {
+      const apiErr = err as ApiClientError;
+      setUsageError(apiErr?.message ?? "Could not load token usage.");
+    } finally {
+      setUsageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshUsage();
+  }, [refreshUsage]);
+
+  const quotaExhausted = usage !== null && usage.remainingTokens <= 0;
 
   return (
     <Stack
@@ -38,6 +127,16 @@ export default function ChatPage() {
           and citations will connect here once the API is live.
         </Typography>
       </Stack>
+
+      {usageLoading ? (
+        <LinearProgress aria-label="Loading token usage" />
+      ) : usage ? (
+        <QuotaBar usage={usage} />
+      ) : usageError ? (
+        <Typography variant="body2" color="error" sx={{ overflowWrap: "anywhere" }}>
+          {usageError}
+        </Typography>
+      ) : null}
 
       <Paper
         elevation={0}
@@ -68,6 +167,9 @@ export default function ChatPage() {
             <Typography color="text.secondary">
               When documents are READY, answers will be grounded in retrieved chunks
               and will abstain if evidence is insufficient.
+              {quotaExhausted
+                ? " Your monthly chat token quota is used up — try again next UTC month."
+                : null}
             </Typography>
           </Stack>
         </Box>
@@ -82,6 +184,7 @@ export default function ChatPage() {
             placeholder="Ask about your documents…"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
+            disabled={quotaExhausted}
             slotProps={{
               input: {
                 sx: {
@@ -95,7 +198,7 @@ export default function ChatPage() {
                     <IconButton
                       color="primary"
                       aria-label="Send message"
-                      disabled={!draft.trim()}
+                      disabled={!draft.trim() || quotaExhausted}
                       sx={{
                         bgcolor: palette.orange,
                         color: palette.onAccent,
@@ -114,7 +217,7 @@ export default function ChatPage() {
           />
           <Button
             variant="contained"
-            disabled={!draft.trim()}
+            disabled={!draft.trim() || quotaExhausted}
             sx={{ display: { xs: "none", sm: "inline-flex" }, minWidth: 120 }}
           >
             Send

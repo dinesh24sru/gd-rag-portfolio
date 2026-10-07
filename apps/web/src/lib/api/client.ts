@@ -29,6 +29,13 @@ export type CreateUploadUrlResponse = {
   expiresInSeconds: number;
 };
 
+export type ChatUsageSnapshot = {
+  period: string;
+  usedTokens: number;
+  quotaTokens: number;
+  remainingTokens: number;
+};
+
 export type ApiClientError = {
   status: number;
   code?: string;
@@ -126,6 +133,10 @@ export async function createUploadUrl(input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
+}
+
+export async function fetchUsage(): Promise<ChatUsageSnapshot> {
+  return apiFetch<ChatUsageSnapshot>("/usage");
 }
 
 export async function listDocuments(): Promise<DocumentRecord[]> {

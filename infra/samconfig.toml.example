@@ -24,6 +24,7 @@ confirm_changeset = true
 #   "LlmProvider=gemini",
 #   "GeminiApiKey=REPLACE_ME",
 #   "GeminiModelId=gemini-2.5-flash",
+#   "ChatTokenQuotaMonthly=50000",
 #   # Switch back later:
 #   # "EmbeddingProvider=bedrock",
 #   # "BedrockEmbeddingModelId=amazon.titan-embed-text-v2:0",

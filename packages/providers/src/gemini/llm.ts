@@ -1,4 +1,5 @@
-import type { LLMProvider, LLMRequest, LLMResponse } from "@gd-rag/core";
+import type { LLMProvider, LLMRequest, LLMResponse, LLMTokenUsage } from "@gd-rag/core";
+import { logWarn } from "@gd-rag/shared";
 
 const DEFAULT_MODEL = "gemini-2.5-flash";
 const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
@@ -19,8 +20,14 @@ type GeminiPart = { text?: string };
 type GeminiCandidate = {
   content?: { parts?: GeminiPart[] };
 };
+type GeminiUsageMetadata = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+};
 type GeminiGenerateResponse = {
   candidates?: GeminiCandidate[];
+  usageMetadata?: GeminiUsageMetadata;
   error?: { message?: string };
 };
 
@@ -88,7 +95,8 @@ export function createGeminiLLMProvider(options: GeminiLLMOptions): LLMProvider 
         if (!text) {
           throw new Error("Gemini generateContent response missing text");
         }
-        return { text };
+        const usage = resolveUsage(payload.usageMetadata, request, text);
+        return { text, usage };
       } finally {
         clearTimeout(timer);
       }
@@ -103,6 +111,46 @@ function extractText(payload: GeminiGenerateResponse): string {
     .filter(Boolean)
     .join("\n")
     .trim();
+}
+
+function resolveUsage(
+  meta: GeminiUsageMetadata | undefined,
+  request: LLMRequest,
+  outputText: string,
+): LLMTokenUsage {
+  const input = Number(meta?.promptTokenCount);
+  const output = Number(meta?.candidatesTokenCount);
+  const total = Number(meta?.totalTokenCount);
+  if (
+    Number.isFinite(input) &&
+    input >= 0 &&
+    Number.isFinite(output) &&
+    output >= 0
+  ) {
+    return {
+      inputTokens: Math.floor(input),
+      outputTokens: Math.floor(output),
+      totalTokens: Number.isFinite(total) && total > 0
+        ? Math.floor(total)
+        : Math.floor(input + output),
+    };
+  }
+
+  // Fallback when Gemini omits usageMetadata — rough char/4 estimate.
+  const estIn = Math.ceil(
+    (request.systemPrompt.length + request.userPrompt.length) / 4,
+  );
+  const estOut = Math.ceil(outputText.length / 4);
+  logWarn("rag.usage_estimated", {
+    inputTokens: estIn,
+    outputTokens: estOut,
+    totalTokens: estIn + estOut,
+  });
+  return {
+    inputTokens: estIn,
+    outputTokens: estOut,
+    totalTokens: estIn + estOut,
+  };
 }
 
 async function safeReadText(response: Response): Promise<string> {

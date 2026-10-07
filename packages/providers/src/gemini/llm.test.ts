@@ -25,6 +25,11 @@ describe("createGeminiLLMProvider", () => {
               },
             },
           ],
+          usageMetadata: {
+            promptTokenCount: 10,
+            candidatesTokenCount: 4,
+            totalTokenCount: 14,
+          },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
@@ -50,6 +55,11 @@ describe("createGeminiLLMProvider", () => {
       generationConfig: { maxOutputTokens: 128, temperature: 0.2 },
     });
     assert.equal(result.text, "Grounded answer");
+    assert.deepEqual(result.usage, {
+      inputTokens: 10,
+      outputTokens: 4,
+      totalTokens: 14,
+    });
   });
 
   it("surfaces non-OK responses", async () => {

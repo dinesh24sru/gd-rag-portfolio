@@ -45,4 +45,18 @@ export type {
 export { parseS3EventRecords } from "./ingestion/parseS3Event";
 export type { S3ObjectCreatedRef } from "./ingestion/parseS3Event";
 
-export type { LLMProvider, LLMRequest, LLMResponse } from "./llm/ports";
+export type { LLMProvider, LLMRequest, LLMResponse, LLMTokenUsage } from "./llm/ports";
+
+export type { UsageRepository } from "./usage/ports";
+export {
+  getChatUsage,
+  assertChatQuota,
+  recordChatTokens,
+  DEFAULT_CHAT_TOKEN_QUOTA_MONTHLY,
+  resolveChatTokenQuotaMonthly,
+  utcMonthPeriod,
+} from "./usage/chatUsage";
+export type { ChatUsageDeps } from "./usage/chatUsage";
+export { chatUsageDocumentId } from "./usage/period";
+export { withChatQuota } from "./usage/withChatQuota";
+export type { ChatQuotaRunResult } from "./usage/withChatQuota";

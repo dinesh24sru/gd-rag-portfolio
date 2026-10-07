@@ -384,6 +384,8 @@ Usage
 
 Each tenant-owned item contains `tenantId`.
 
+Chat usage reuses the Documents table with sort key `USAGE#CHAT#YYYY-MM` (filtered out of document lists). Fields: `usedTokens`, `quotaTokens`, `period`, `entityType=chat_usage`. Increments are conditional so concurrent asks cannot exceed the monthly quota.
+
 ### Qdrant
 
 Stores:
@@ -508,7 +510,7 @@ Required controls:
 * Prompt-injection-resistant context handling.
 * No arbitrary remote URL ingestion in the initial version.
 * CloudWatch logging without sensitive document contents where unnecessary.
-* Structured ops events (`upload.*`, `ingest.*`, `delete.*`, `api.*`) with tenant/document IDs, sizes, and step outcomes — never file bodies or secrets.
+* Structured ops events (`upload.*`, `ingest.*`, `delete.*`, `api.*`, `usage.*`) with tenant/document IDs, sizes, and step outcomes — never file bodies or secrets.
 
 ---
 
@@ -540,7 +542,8 @@ Control model cost through:
 * limited retrieval top-K;
 * bounded context size;
 * output token limits;
-* per-tenant quotas;
+* per-tenant chat token quotas (default 50,000 LLM tokens per tenant per UTC month; `CHAT_TOKEN_QUOTA_MONTHLY`); Gemini free tier is $0 for Flash tokens but **RPM/TPM/RPD are project-wide**, so tenant caps protect the shared key;
+* `GET /usage` returns `{ period, usedTokens, quotaTokens, remainingTokens }`; chat ask must enforce before LLM and return updated usage after each request;
 * abstention instead of speculative retries;
 * avoiding unnecessary second-pass LLM calls;
 * no LangChain or other heavy orchestration frameworks in Lambda (keeps bundles small).

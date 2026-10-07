@@ -113,6 +113,12 @@ Parameters:
     Default: gemini-2.5-flash
     Description: Gemini model ID for grounded generation.
 
+  ChatTokenQuotaMonthly:
+    Type: Number
+    Default: 50000
+    MinValue: 1000
+    Description: Per-tenant monthly chat LLM token hard cap (UTC month). Sized for shared Gemini free-tier RPM/RPD.
+
 Resources:
   UserPool:
     Type: AWS::Cognito::UserPool
@@ -348,6 +354,7 @@ Resources:
           LLM_PROVIDER: !Ref LlmProvider
           GEMINI_API_KEY: !Ref GeminiApiKey
           GEMINI_MODEL_ID: !Ref GeminiModelId
+          CHAT_TOKEN_QUOTA_MONTHLY: !Sub "${ChatTokenQuotaMonthly}"
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DocumentsTable
@@ -367,6 +374,14 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /me
+            Method: GET
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+        GetUsage:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /usage
             Method: GET
             Auth:
               Authorizer: CognitoJwtAuthorizer

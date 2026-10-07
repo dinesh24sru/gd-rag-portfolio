@@ -1,9 +1,20 @@
 import type { APIGatewayProxyResultV2 } from "aws-lambda";
-import { AppError, logError, logWarn, type ApiErrorBody } from "@gd-rag/shared";
+import {
+  AppError,
+  QuotaExceededError,
+  logError,
+  logWarn,
+  type ApiErrorBody,
+  type ChatUsageSnapshot,
+} from "@gd-rag/shared";
 
 const DEFAULT_HEADERS = {
   "content-type": "application/json",
 } as const;
+
+export type ApiErrorResponseBody = ApiErrorBody & {
+  usage?: ChatUsageSnapshot;
+};
 
 export function jsonResponse(
   statusCode: number,
@@ -40,12 +51,15 @@ export function errorResponse(
       statusCode: error.statusCode,
       message: error.message,
     });
-    const body: ApiErrorBody = {
+    const body: ApiErrorResponseBody = {
       error: {
         code: error.code,
         message: error.message,
       },
     };
+    if (error instanceof QuotaExceededError) {
+      body.usage = error.usage;
+    }
     return jsonResponse(error.statusCode, body);
   }
 

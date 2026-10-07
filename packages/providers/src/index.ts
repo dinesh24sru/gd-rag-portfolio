@@ -3,6 +3,10 @@ export {
   type DynamoDocumentRepositoryOptions,
 } from "./dynamodb/documentRepository";
 export {
+  createDynamoUsageRepository,
+  type DynamoUsageRepositoryOptions,
+} from "./dynamodb/usageRepository";
+export {
   createS3ObjectStorage,
   type S3ObjectStorageOptions,
 } from "./s3/objectStorage";

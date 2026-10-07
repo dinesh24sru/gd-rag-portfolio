@@ -13,7 +13,13 @@ export type AuthClaims = {
   [key: string]: string | undefined;
 };
 
-export type ApiErrorCode = "UNAUTHORIZED" | "FORBIDDEN" | "BAD_REQUEST" | "NOT_FOUND" | "INTERNAL";
+export type ApiErrorCode =
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "BAD_REQUEST"
+  | "NOT_FOUND"
+  | "QUOTA_EXCEEDED"
+  | "INTERNAL";
 
 export type ApiErrorBody = {
   error: {
