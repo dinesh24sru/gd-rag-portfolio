@@ -104,25 +104,34 @@ export function createQdrantVectorStore(options: QdrantVectorStoreOptions): Vect
     },
 
     async search(request): Promise<SearchResult[]> {
+      if (typeof client.query !== "function") {
+        throw new Error(
+          "Qdrant client missing query(); upgrade @qdrant/js-client-rest or stop using removed search()",
+        );
+      }
       await ensureCollection(client, options.collection, options.dimensions);
-      const result = await client.search(options.collection, {
-        vector: request.vector,
+      // @qdrant/js-client-rest 1.19 removed search(); query() returns { points }.
+      const result = await client.query(options.collection, {
+        query: request.vector,
         limit: request.topK,
         with_payload: true,
         filter: {
           must: [{ key: "tenantId", match: { value: request.tenantId } }],
         },
       });
-      return result.map((point) => {
-        const payload = (point.payload ?? {}) as Record<string, unknown>;
-        return {
-          chunkId: String(payload.chunkId ?? point.id),
-          documentId: String(payload.documentId ?? ""),
-          version: Number(payload.version ?? 0),
-          text: String(payload.text ?? ""),
-          score: point.score ?? 0,
-        };
-      });
+      const points = result.points ?? [];
+      return points
+        .map((point) => {
+          const payload = (point.payload ?? {}) as Record<string, unknown>;
+          return {
+            chunkId: String(payload.chunkId ?? point.id),
+            documentId: String(payload.documentId ?? ""),
+            version: Number(payload.version ?? 0),
+            text: String(payload.text ?? ""),
+            score: typeof point.score === "number" ? point.score : 0,
+          };
+        })
+        .sort((a, b) => b.score - a.score);
     },
 
     async deleteDocument(tenantId: string, documentId: string): Promise<void> {

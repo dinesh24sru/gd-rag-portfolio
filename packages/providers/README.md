@@ -9,7 +9,8 @@ Provider implementations behind `packages/core` interfaces.
 * `createVoyageEmbeddingProvider` — Voyage text embeddings via HTTPS (interim default)
 * `createBedrockEmbeddingProvider` — Titan text embeddings via Bedrock (target)
 * `createGeminiLLMProvider` — Gemini generateContent via HTTPS (interim ask)
-* `createQdrantVectorStore` — tenant-filtered upsert/search/delete
+* `createQdrantVectorStore` — tenant-filtered upsert / `query` retrieve / delete
+  (`@qdrant/js-client-rest` **1.19+** removed `search()`; adapter uses `query()`)
 * Planned: `createBedrockLLMProvider` (target ask)
 
 See `docs/ARCHITECTURE.md` §11 for interim vs target model providers and env switch rules.
