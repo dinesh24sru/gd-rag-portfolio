@@ -125,7 +125,7 @@ Response
 ```text
 Browser
   │
-  │ request upload
+  │ hash file (SHA-256) + request upload
   ▼
 API Gateway
   │
@@ -134,6 +134,7 @@ Lambda
   │
   ├── authenticate
   ├── authorize tenant
+  ├── reject duplicate contentHash for tenant
   ├── create document record
   └── generate presigned S3 URL
   │
@@ -156,7 +157,10 @@ DynamoDB stores document metadata and processing status.
 
 v1 upload implementation:
 
-* `POST /documents/upload-url` creates a `PENDING` metadata row (tenant = Cognito `sub`) and returns a short-lived S3 presigned PUT URL.
+* Browser computes `contentHash` = SHA-256 hex of the file bytes before calling the API.
+* `POST /documents/upload-url` accepts `fileName`, `contentType`, `sizeBytes`, and `contentHash`.
+* API rejects the request if the authenticated tenant already has a document with the same `contentHash` (duplicate content), without creating a new row or presigned URL.
+* Otherwise it creates a `PENDING` metadata row (tenant = Cognito `sub`, stores `contentHash`) and returns a short-lived S3 presigned PUT URL.
 * Browser uploads directly to private S3 (`tenant/{tenantId}/documents/{documentId}/{version}/original`).
 * Allowed types: PDF / plain text / Markdown; max 10 MiB; DynamoDB on-demand; S3 Block Public Access.
 * SQS → ingestion worker (extract/chunk/embed/index) advances status `PENDING → PROCESSING → READY` (or `FAILED`).
@@ -174,6 +178,7 @@ Lambda Worker
  ├── validate event
  ├── check idempotency
  ├── download document from S3
+ ├── verify contentHash matches downloaded bytes
  ├── extract text
  ├── split into chunks
  ├── generate embeddings
@@ -218,6 +223,11 @@ version
 contentHash
 chunkId
 ```
+
+`contentHash` (SHA-256 of original file bytes) is used for:
+
+* **Upload dedupe** — same tenant + same hash → reject at `upload-url` (no second document row).
+* **Ingestion integrity** — worker recomputes the hash of the S3 object and permanently fails if it does not match metadata.
 
 Vector IDs should be deterministic, for example:
 
@@ -388,6 +398,8 @@ source metadata
 ```
 
 `tenantId` must be available as vector metadata for mandatory filtering.
+
+Payload keyword indexes on `tenantId` and `documentId` are required (Qdrant Cloud strict mode rejects unindexed filter search/delete). The vector store adapter ensures these indexes exist when creating/using the collection.
 
 ---
 

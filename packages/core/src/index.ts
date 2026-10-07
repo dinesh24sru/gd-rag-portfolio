@@ -12,6 +12,7 @@ export {
 } from "./documents/limits";
 export { buildDocumentObjectKey, parseDocumentObjectKey } from "./documents/keys";
 export type { ParsedDocumentObjectKey } from "./documents/keys";
+export { normalizeContentHash, sha256Hex } from "./documents/contentHash";
 export { createUpload } from "./documents/createUpload";
 export type { CreateUploadDeps } from "./documents/createUpload";
 export { getDocument } from "./documents/getDocument";

@@ -35,6 +35,9 @@ function memoryRepo(seed: DocumentRecord[]): DocumentRepository & { items: Docum
 }
 
 describe("ingestDocument", () => {
+  const helloHash =
+    "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
+
   const baseDoc: DocumentRecord = {
     tenantId: "tenant-a",
     documentId: "doc-1",
@@ -42,6 +45,7 @@ describe("ingestDocument", () => {
     fileName: "notes.txt",
     contentType: "text/plain",
     sizeBytes: 11,
+    contentHash: helloHash,
     status: "PENDING",
     s3Key: "tenant/tenant-a/documents/doc-1/1/original",
     createdAt: "2026-01-01T00:00:00.000Z",
@@ -124,7 +128,9 @@ describe("ingestDocument", () => {
   });
 
   it("marks FAILED on permanent extract errors and rethrows", async () => {
-    const documents = memoryRepo([structuredClone(baseDoc)]);
+    const documents = memoryRepo([
+      { ...structuredClone(baseDoc), contentHash: undefined as unknown as string },
+    ]);
     await assert.rejects(
       () =>
         ingestDocument(
@@ -155,6 +161,47 @@ describe("ingestDocument", () => {
           },
         ),
       (err: unknown) => err instanceof PermanentIngestionError,
+    );
+    assert.equal(documents.items[0]?.status, "FAILED");
+  });
+
+  it("marks FAILED when uploaded bytes do not match contentHash", async () => {
+    const documents = memoryRepo([structuredClone(baseDoc)]);
+    await assert.rejects(
+      () =>
+        ingestDocument(
+          { bucket: "b", key: baseDoc.s3Key },
+          {
+            documents,
+            objects: {
+              async presignPut() {
+                return "";
+              },
+              async getObject() {
+                return {
+                  body: new TextEncoder().encode("tampered"),
+                  contentType: "text/plain",
+                };
+              },
+              async deleteObject() {},
+            },
+            embeddings: {
+              async embed() {
+                return [];
+              },
+            },
+            vectors: {
+              async upsert() {},
+              async search() {
+                return [];
+              },
+              async deleteDocument() {},
+            },
+          },
+        ),
+      (err: unknown) =>
+        err instanceof PermanentIngestionError &&
+        /contentHash does not match/.test(err.message),
     );
     assert.equal(documents.items[0]?.status, "FAILED");
   });

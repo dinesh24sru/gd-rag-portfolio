@@ -139,6 +139,7 @@ describe("handler routes", () => {
               fileName: input.fileName,
               contentType: input.contentType,
               sizeBytes: input.sizeBytes,
+              contentHash: input.contentHash,
               status: "PENDING",
               s3Key: `tenant/${auth.tenantId}/documents/doc-1/1/original`,
               createdAt: "2026-01-01T00:00:00.000Z",
@@ -167,6 +168,7 @@ describe("handler routes", () => {
           fileName: "a.txt",
           contentType: "text/plain",
           sizeBytes: 3,
+          contentHash: "a".repeat(64),
         }),
         requestContext: {
           accountId: "123",

@@ -6,6 +6,7 @@ import {
   type DocumentRecord,
 } from "@gd-rag/shared";
 import type { AuthContext } from "../auth/context";
+import { normalizeContentHash } from "./contentHash";
 import { buildDocumentObjectKey } from "./keys";
 import {
   ALLOWED_CONTENT_TYPES,
@@ -42,6 +43,7 @@ export async function createUpload(
   const fileName = sanitizeFileName(input.fileName ?? "");
   const contentType = (input.contentType ?? "").trim().toLowerCase();
   const sizeBytes = Number(input.sizeBytes);
+  const contentHash = normalizeContentHash(input.contentHash);
   const maxBytes = deps.maxUploadBytes ?? MAX_UPLOAD_BYTES;
   const expiresInSeconds = deps.presignExpiresSeconds ?? PRESIGN_EXPIRES_SECONDS;
 
@@ -67,6 +69,13 @@ export async function createUpload(
     );
   }
 
+  const duplicate = existing.find((doc) => doc.contentHash === contentHash);
+  if (duplicate) {
+    throw new ValidationError(
+      `This file is already uploaded as “${duplicate.fileName}” (${duplicate.status}).`,
+    );
+  }
+
   const documentId = (deps.idFactory ?? randomUUID)();
   const version = 1;
   const now = (deps.now ?? (() => new Date))().toISOString();
@@ -83,6 +92,7 @@ export async function createUpload(
     fileName,
     contentType,
     sizeBytes,
+    contentHash,
     status: "PENDING",
     s3Key,
     createdAt: now,

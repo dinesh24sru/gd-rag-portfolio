@@ -4,6 +4,9 @@ import type { DocumentRecord } from "@gd-rag/shared";
 import { createUpload } from "./createUpload";
 import type { DocumentRepository, ObjectStorage } from "./ports";
 
+const HASH_A = "a".repeat(64);
+const HASH_B = "b".repeat(64);
+
 function memoryRepo(): DocumentRepository & { items: DocumentRecord[] } {
   const items: DocumentRecord[] = [];
   return {
@@ -55,6 +58,7 @@ describe("createUpload", () => {
         fileName: "notes.txt",
         contentType: "text/plain",
         sizeBytes: 12,
+        contentHash: HASH_A,
       },
       {
         documents,
@@ -66,6 +70,7 @@ describe("createUpload", () => {
 
     assert.equal(result.document.tenantId, "tenant-a");
     assert.equal(result.document.status, "PENDING");
+    assert.equal(result.document.contentHash, HASH_A);
     assert.equal(
       result.document.s3Key,
       "tenant/tenant-a/documents/doc-1/1/original",
@@ -74,12 +79,95 @@ describe("createUpload", () => {
     assert.equal(documents.items.length, 1);
   });
 
+  it("rejects duplicate contentHash for the same tenant", async () => {
+    const documents = memoryRepo();
+    await documents.put({
+      tenantId: "tenant-a",
+      documentId: "existing",
+      version: 1,
+      fileName: "readme.md",
+      contentType: "text/markdown",
+      sizeBytes: 10,
+      contentHash: HASH_A,
+      status: "READY",
+      s3Key: "tenant/tenant-a/documents/existing/1/original",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+
+    await assert.rejects(
+      () =>
+        createUpload(
+          auth,
+          {
+            fileName: "README-copy.md",
+            contentType: "text/markdown",
+            sizeBytes: 10,
+            contentHash: HASH_A,
+          },
+          { documents, objects: stubObjects },
+        ),
+      /already uploaded as “readme\.md”/,
+    );
+  });
+
+  it("allows the same contentHash for a different tenant", async () => {
+    const documents = memoryRepo();
+    await documents.put({
+      tenantId: "tenant-b",
+      documentId: "other",
+      version: 1,
+      fileName: "notes.txt",
+      contentType: "text/plain",
+      sizeBytes: 12,
+      contentHash: HASH_A,
+      status: "READY",
+      s3Key: "tenant/tenant-b/documents/other/1/original",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+
+    const result = await createUpload(
+      auth,
+      {
+        fileName: "notes.txt",
+        contentType: "text/plain",
+        sizeBytes: 12,
+        contentHash: HASH_A,
+      },
+      { documents, objects: stubObjects, idFactory: () => "doc-2" },
+    );
+    assert.equal(result.document.documentId, "doc-2");
+  });
+
+  it("rejects invalid contentHash", async () => {
+    await assert.rejects(
+      () =>
+        createUpload(
+          auth,
+          {
+            fileName: "notes.txt",
+            contentType: "text/plain",
+            sizeBytes: 12,
+            contentHash: "nope",
+          },
+          { documents: memoryRepo(), objects: stubObjects },
+        ),
+      /SHA-256/,
+    );
+  });
+
   it("rejects disallowed content types", async () => {
     await assert.rejects(
       () =>
         createUpload(
           auth,
-          { fileName: "x.exe", contentType: "application/octet-stream", sizeBytes: 10 },
+          {
+            fileName: "x.exe",
+            contentType: "application/octet-stream",
+            sizeBytes: 10,
+            contentHash: HASH_B,
+          },
           {
             documents: memoryRepo(),
             objects: stubObjects,
@@ -94,7 +182,12 @@ describe("createUpload", () => {
       () =>
         createUpload(
           auth,
-          { fileName: "big.pdf", contentType: "application/pdf", sizeBytes: 99 },
+          {
+            fileName: "big.pdf",
+            contentType: "application/pdf",
+            sizeBytes: 99,
+            contentHash: HASH_B,
+          },
           {
             documents: memoryRepo(),
             objects: stubObjects,
@@ -115,6 +208,7 @@ describe("createUpload", () => {
         fileName: `${i}.txt`,
         contentType: "text/plain",
         sizeBytes: 1,
+        contentHash: `${i}`.padStart(64, "0"),
         status: "PENDING",
         s3Key: `tenant/tenant-a/documents/d-${i}/1/original`,
         createdAt: "2026-01-01T00:00:00.000Z",
@@ -126,7 +220,12 @@ describe("createUpload", () => {
       () =>
         createUpload(
           auth,
-          { fileName: "extra.txt", contentType: "text/plain", sizeBytes: 1 },
+          {
+            fileName: "extra.txt",
+            contentType: "text/plain",
+            sizeBytes: 1,
+            contentHash: HASH_B,
+          },
           { documents, objects: stubObjects, maxDocumentsPerTenant: 5 },
         ),
       /Document limit reached/,

@@ -1,4 +1,5 @@
 import { PermanentIngestionError, type DocumentRecord } from "@gd-rag/shared";
+import { sha256Hex } from "../documents/contentHash";
 import { parseDocumentObjectKey } from "../documents/keys";
 import type { DocumentRepository, ObjectStorage } from "../documents/ports";
 import { chunkText } from "./chunkText";
@@ -78,6 +79,14 @@ export async function ingestDocument(
     }
 
     const object = await deps.objects.getObject(document.s3Key);
+    if (document.contentHash) {
+      const actualHash = sha256Hex(object.body);
+      if (actualHash !== document.contentHash) {
+        throw new PermanentIngestionError(
+          "Uploaded object contentHash does not match document metadata",
+        );
+      }
+    }
     const contentType = document.contentType || object.contentType || "application/octet-stream";
     const text = await extractTextFromObject({ body: object.body, contentType });
     const chunks = chunkText({

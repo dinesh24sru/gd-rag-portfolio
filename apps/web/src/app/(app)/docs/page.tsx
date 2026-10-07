@@ -22,6 +22,7 @@ import {
   listDocuments,
   type DocumentRecord,
 } from "@/lib/api/client";
+import { sha256HexOfFile } from "@/lib/contentHash";
 import { palette } from "@/theme/theme";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -111,10 +112,12 @@ export default function DocsPage() {
       const contentType = resolveContentType(file);
       setUploading(true);
 
+      const contentHash = await sha256HexOfFile(file);
       const { document, uploadUrl } = await createUploadUrl({
         fileName: file.name,
         contentType,
         sizeBytes: file.size,
+        contentHash,
       });
 
       const put = await fetch(uploadUrl, {
@@ -129,7 +132,7 @@ export default function DocsPage() {
         throw new Error(`S3 upload failed (${put.status})`);
       }
 
-      setInfo(`Uploaded “${document.fileName}”. Status is PENDING until ingestion is wired.`);
+      setInfo(`Uploaded “${document.fileName}”. Processing will start shortly.`);
       await refresh();
     } catch (err) {
       setError(errorMessage(err, "Upload failed"));

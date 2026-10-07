@@ -16,6 +16,7 @@ export type DocumentRecord = {
   fileName: string;
   contentType: string;
   sizeBytes: number;
+  contentHash?: string;
   status: DocumentStatus;
   s3Key: string;
   createdAt: string;
@@ -118,6 +119,7 @@ export async function createUploadUrl(input: {
   fileName: string;
   contentType: string;
   sizeBytes: number;
+  contentHash: string;
 }): Promise<CreateUploadUrlResponse> {
   return apiFetch<CreateUploadUrlResponse>("/documents/upload-url", {
     method: "POST",

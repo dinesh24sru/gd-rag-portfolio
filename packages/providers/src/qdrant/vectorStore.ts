@@ -24,6 +24,30 @@ export function chunkPointId(chunkId: string): string {
   ].join("-");
 }
 
+/** Payload fields used in tenant/document filters (required under Qdrant strict mode). */
+const FILTER_PAYLOAD_INDEXES = ["tenantId", "documentId"] as const;
+
+async function ensurePayloadIndexes(
+  client: QdrantClient,
+  collection: string,
+): Promise<void> {
+  for (const fieldName of FILTER_PAYLOAD_INDEXES) {
+    try {
+      await client.createPayloadIndex(collection, {
+        wait: true,
+        field_name: fieldName,
+        field_schema: "keyword",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      // Index may already exist from a prior ensure / console setup.
+      if (!/already exists|duplicate/i.test(message)) {
+        throw err;
+      }
+    }
+  }
+}
+
 async function ensureCollection(
   client: QdrantClient,
   collection: string,
@@ -43,6 +67,7 @@ async function ensureCollection(
       },
     });
   }
+  await ensurePayloadIndexes(client, collection);
   ensuredCollections.add(key);
 }
 
@@ -106,6 +131,8 @@ export function createQdrantVectorStore(options: QdrantVectorStoreOptions): Vect
       if (!found) {
         return;
       }
+      // Strict mode rejects filter deletes on unindexed payload fields.
+      await ensurePayloadIndexes(client, options.collection);
       await client.delete(options.collection, {
         wait: true,
         filter: {
