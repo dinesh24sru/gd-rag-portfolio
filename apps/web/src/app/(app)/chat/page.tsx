@@ -65,7 +65,7 @@ function QuotaBar({ usage }: { usage: ChatUsageSnapshot }) {
             borderRadius: 999,
             bgcolor: "rgba(79,109,122,0.12)",
             "& .MuiLinearProgress-bar": {
-              bgcolor: usage.remainingTokens === 0 ? palette.orange : palette.teal,
+              bgcolor: usage.remainingTokens === 0 ? palette.orange : palette.slate,
             },
           }}
         />
