@@ -46,14 +46,14 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-function optionalVectorStore(): VectorStore | undefined {
-  const url = process.env.QDRANT_URL?.trim();
-  const apiKey = process.env.QDRANT_API_KEY?.trim();
-  const collection = process.env.QDRANT_COLLECTION?.trim();
-  if (!url || !apiKey || !collection) {
-    return undefined;
-  }
+function requiredVectorStore(): VectorStore {
+  const url = requiredEnv("QDRANT_URL");
+  const apiKey = requiredEnv("QDRANT_API_KEY");
+  const collection = requiredEnv("QDRANT_COLLECTION");
   const dimensions = Number(process.env.EMBEDDING_DIMENSIONS ?? "256");
+  if (!Number.isFinite(dimensions) || dimensions <= 0) {
+    throw new Error("EMBEDDING_DIMENSIONS must be a positive number");
+  }
   return createQdrantVectorStore({ url, apiKey, collection, dimensions });
 }
 
@@ -62,7 +62,7 @@ function buildFromEnv(): ApiWiring {
   const bucketName = requiredEnv("DOCUMENTS_BUCKET_NAME");
   const documents: DocumentRepository = createDynamoDocumentRepository({ tableName });
   const objects: ObjectStorage = createS3ObjectStorage({ bucketName });
-  const vectors = optionalVectorStore();
+  const vectors = requiredVectorStore();
   const deps: CreateUploadDeps = { documents, objects };
 
   return {

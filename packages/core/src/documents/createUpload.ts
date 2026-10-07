@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
   ValidationError,
+  logInfo,
+  logWarn,
   type CreateUploadRequest,
   type CreateUploadResponse,
   type DocumentRecord,
@@ -71,6 +73,13 @@ export async function createUpload(
 
   const duplicate = existing.find((doc) => doc.contentHash === contentHash);
   if (duplicate) {
+    logWarn("upload.duplicate_rejected", {
+      tenantId: auth.tenantId,
+      contentHash,
+      existingDocumentId: duplicate.documentId,
+      existingFileName: duplicate.fileName,
+      existingStatus: duplicate.status,
+    });
     throw new ValidationError(
       `This file is already uploaded as “${duplicate.fileName}” (${duplicate.status}).`,
     );
@@ -105,6 +114,17 @@ export async function createUpload(
     key: s3Key,
     contentType,
     contentLength: sizeBytes,
+    expiresInSeconds,
+  });
+
+  logInfo("upload.presign_created", {
+    tenantId: auth.tenantId,
+    documentId,
+    fileName,
+    contentType,
+    sizeBytes,
+    contentHash,
+    s3Key,
     expiresInSeconds,
   });
 

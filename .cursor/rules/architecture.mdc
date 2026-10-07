@@ -22,6 +22,7 @@ Near-zero portfolio stack; **worst case ≤ $10/month**. Be stringent on every r
 * DynamoDB on-demand only; no DAX/global tables/extra GSIs.
 * S3 private + lifecycle; SQS small payloads; HTTP API not REST API.
 * CloudWatch short retention; no chatty custom metrics or document body logs.
+* Step-by-step structured ops logs on backend flows (`upload.*` / `ingest.*` / `delete.*` / `api.*` via `@gd-rag/shared`); see `AGENTS.md` Observability / logging — never log document bodies or secrets.
 * Embeddings/LLM: prefer Voyage + Gemini free/low tiers at portfolio volume; when on Bedrock, smallest suitable models. Hard token/top-K/quota caps; abstain over expensive retries.
 * Before adding/raising capacity, state monthly cost impact and stay inside budget.
 

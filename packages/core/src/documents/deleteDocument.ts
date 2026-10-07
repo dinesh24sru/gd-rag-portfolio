@@ -1,4 +1,4 @@
-import { NotFoundError } from "@gd-rag/shared";
+import { NotFoundError, logError, logInfo, logWarn } from "@gd-rag/shared";
 import { assertSameTenant, type AuthContext } from "../auth/context";
 import type { VectorStore } from "../ingestion/ports";
 import type { DocumentRepository, ObjectStorage } from "./ports";
@@ -30,9 +30,70 @@ export async function deleteDocument(
 
   assertSameTenant(document.tenantId, auth);
 
-  if (deps.vectors) {
-    await deps.vectors.deleteDocument(auth.tenantId, document.documentId);
+  logInfo("delete.started", {
+    tenantId: auth.tenantId,
+    documentId: document.documentId,
+    fileName: document.fileName,
+    status: document.status,
+    s3Key: document.s3Key,
+    hasVectors: Boolean(deps.vectors),
+  });
+
+  try {
+    if (deps.vectors) {
+      logInfo("delete.qdrant_start", {
+        tenantId: auth.tenantId,
+        documentId: document.documentId,
+      });
+      await deps.vectors.deleteDocument(auth.tenantId, document.documentId);
+      logInfo("delete.qdrant_done", {
+        tenantId: auth.tenantId,
+        documentId: document.documentId,
+      });
+    } else {
+      logWarnSkipVectors(auth.tenantId, document.documentId);
+    }
+
+    logInfo("delete.s3_start", {
+      tenantId: auth.tenantId,
+      documentId: document.documentId,
+      s3Key: document.s3Key,
+    });
+    await deps.objects.deleteObject(document.s3Key);
+    logInfo("delete.s3_done", {
+      tenantId: auth.tenantId,
+      documentId: document.documentId,
+    });
+
+    logInfo("delete.dynamodb_start", {
+      tenantId: auth.tenantId,
+      documentId: document.documentId,
+    });
+    await deps.documents.delete(auth.tenantId, document.documentId);
+    logInfo("delete.dynamodb_done", {
+      tenantId: auth.tenantId,
+      documentId: document.documentId,
+    });
+
+    logInfo("delete.completed", {
+      tenantId: auth.tenantId,
+      documentId: document.documentId,
+      fileName: document.fileName,
+    });
+  } catch (err) {
+    logError("delete.failed", {
+      tenantId: auth.tenantId,
+      documentId: document.documentId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
   }
-  await deps.objects.deleteObject(document.s3Key);
-  await deps.documents.delete(auth.tenantId, document.documentId);
+}
+
+function logWarnSkipVectors(tenantId: string, documentId: string): void {
+  logWarn("delete.qdrant_skipped", {
+    tenantId,
+    documentId,
+    reason: "vector_store_not_configured",
+  });
 }

@@ -109,6 +109,34 @@ or
 * Protect against prompt injection from retrieved documents.
 * Enforce per-tenant usage/rate limits.
 
+### Observability / logging (required)
+
+Every meaningful backend flow must emit **clear, step-by-step CloudWatch logs** so upload, ingestion, delete, RAG, and failures are diagnosable without guessing.
+
+Use `logInfo` / `logWarn` / `logError` from `@gd-rag/shared` (structured `event` name + fields). Prefer dotted event names by domain:
+
+* `api.*` — HTTP route request/success (handlers in `services/api`)
+* `upload.*` — create upload / duplicate reject (`packages/core` documents)
+* `ingest.*` — SQS batch + each pipeline step (`services/ingestion-worker`, `packages/core` ingestion)
+* `delete.*` — Qdrant → S3 → DynamoDB steps (`packages/core` delete)
+* Add matching prefixes for new domains (e.g. `rag.*`, `chat.*`) when those flows land
+
+**Where to log (wherever applicable):**
+
+* Thin handlers: request received, outcome, and batch/record boundaries (messageId, route, counts).
+* Domain/application logic in `packages/core`: each significant step start/done and status transitions (e.g. download → hash → extract → chunk → embed → vector upsert → READY).
+* Multi-store operations: log each store explicitly (Qdrant, S3, DynamoDB) so partial failures are obvious.
+* Failures: permanent vs transient, with `tenantId` / `documentId` / `messageId` / error message when known.
+* Provider adapters may log provider-specific faults (status codes, throttles) without dumping payloads.
+
+**Always include when available:** `tenantId`, `documentId`, `messageId`, `status`, sizes/counts (`sizeBytes`, `chunkCount`, `bytes`), `s3Key`, `contentHash`, outcome/reason.
+
+**Never log:** document/file body text, retrieved chunk text, full prompts/completions, secrets, API keys, raw JWTs, or presigned URL query strings.
+
+Keep logs cheap: short CloudWatch retention already applies; do not add high-cardinality custom metrics or per-token chatter. Skip pure getters with no side effects unless debugging a boundary validation failure.
+
+When adding or changing a backend flow, update step logs in the same change (do not leave silent multi-step paths).
+
 ### Secrets check before commit and push
 
 Before every `git commit` and `git push`, scan the changes that would leave this machine for secrets. Do not commit or push if any are found.
@@ -219,6 +247,7 @@ Every `apps/web` UI change must stay usable on **phones and iPads/tablets**, not
 * Bound all retries (SDK max attempts + application backoff). Do not retry validation/auth errors.
 * Set explicit timeouts on Bedrock and other HTTP model calls (Voyage, Gemini); keep Lambda timeout only slightly above the longest bounded downstream call.
 * Bundle with esbuild/tree-shaking; exclude AWS SDK from browsers; keep Lambda artifacts small.
+* Follow **Observability / logging** above for every Lambda-facing flow; CloudWatch is the default sink.
 
 ## Change Discipline
 

@@ -1,5 +1,5 @@
 import type { APIGatewayProxyResultV2 } from "aws-lambda";
-import { AppError, type ApiErrorBody } from "@gd-rag/shared";
+import { AppError, logError, logWarn, type ApiErrorBody } from "@gd-rag/shared";
 
 const DEFAULT_HEADERS = {
   "content-type": "application/json",
@@ -29,8 +29,17 @@ export function noContent(): APIGatewayProxyResultV2 {
   };
 }
 
-export function errorResponse(error: unknown): APIGatewayProxyResultV2 {
+export function errorResponse(
+  error: unknown,
+  context: Record<string, unknown> = {},
+): APIGatewayProxyResultV2 {
   if (error instanceof AppError) {
+    logWarn("api.error", {
+      ...context,
+      code: error.code,
+      statusCode: error.statusCode,
+      message: error.message,
+    });
     const body: ApiErrorBody = {
       error: {
         code: error.code,
@@ -40,7 +49,10 @@ export function errorResponse(error: unknown): APIGatewayProxyResultV2 {
     return jsonResponse(error.statusCode, body);
   }
 
-  console.error("Unhandled error", error);
+  logError("api.unhandled_error", {
+    ...context,
+    error: error instanceof Error ? error.message : String(error),
+  });
   const body: ApiErrorBody = {
     error: {
       code: "INTERNAL",

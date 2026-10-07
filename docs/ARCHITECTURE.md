@@ -508,6 +508,7 @@ Required controls:
 * Prompt-injection-resistant context handling.
 * No arbitrary remote URL ingestion in the initial version.
 * CloudWatch logging without sensitive document contents where unnecessary.
+* Structured ops events (`upload.*`, `ingest.*`, `delete.*`, `api.*`) with tenant/document IDs, sizes, and step outcomes — never file bodies or secrets.
 
 ---
 

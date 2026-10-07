@@ -13,3 +13,4 @@ export type {
   CreateUploadRequest,
   CreateUploadResponse,
 } from "./documents";
+export { logInfo, logWarn, logError } from "./log";
