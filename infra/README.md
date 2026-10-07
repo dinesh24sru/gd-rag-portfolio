@@ -25,7 +25,7 @@ Resources in [`template.yaml`](template.yaml):
 4. Node.js 20+ and npm available (run `npm run build:lambdas` before `sam build`)
 5. Qdrant Cloud URL + API key (for indexing)
 6. **Embeddings (interim):** Voyage API key (`voyage-4-lite`). **Target:** Bedrock model access in the deploy region for `amazon.titan-embed-text-v2:0`
-7. **LLM / ask path (interim):** Gemini API key (Google AI Studio, Gemini 2.5 Flash). **Target:** Bedrock LLM access (Nova Micro/Lite or Claude Haiku)
+7. **LLM / ask path (interim):** Gemini API key (Google AI Studio, Gemini 3.8 Flash). **Target:** Bedrock LLM access (Nova Micro/Lite or Claude Haiku)
 
 Provider selection and switch-back rules: `docs/ARCHITECTURE.md` §11. Never commit Voyage/Gemini/Bedrock secrets; pass them only as SAM parameters / Lambda env.
 

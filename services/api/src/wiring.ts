@@ -131,7 +131,7 @@ function createLlm(provider: string): LLMProvider {
   if (provider === "gemini") {
     return createGeminiLLMProvider({
       apiKey: requiredEnv("GEMINI_API_KEY"),
-      modelId: process.env.GEMINI_MODEL_ID?.trim() || "gemini-2.5-flash",
+      modelId: process.env.GEMINI_MODEL_ID?.trim() || "gemini-3.8-flash",
       defaultMaxOutputTokens: resolveRagConfig().maxOutputTokens,
     });
   }

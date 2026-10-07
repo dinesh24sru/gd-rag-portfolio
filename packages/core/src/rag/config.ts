@@ -11,7 +11,8 @@ export type RagConfig = {
 
 export const DEFAULT_RAG_CONFIG: RagConfig = {
   topK: 5,
-  minScore: 0.35,
+  /** Voyage cosine sims on short portfolio docs often land ~0.2–0.5; 0.35 was too strict. */
+  minScore: 0.2,
   maxQuestionChars: 2_000,
   maxContextChars: 6_000,
   maxChunkChars: 1_200,

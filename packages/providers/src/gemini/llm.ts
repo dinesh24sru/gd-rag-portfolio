@@ -1,7 +1,8 @@
 import type { LLMProvider, LLMRequest, LLMResponse, LLMTokenUsage } from "@gd-rag/core";
 import { logWarn } from "@gd-rag/shared";
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+/** New Gemini API projects cannot use 2.5 Flash; 3.8 Flash is the current free-tier default. */
+const DEFAULT_MODEL = "gemini-3.8-flash";
 const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_OUTPUT_TOKENS = 512;

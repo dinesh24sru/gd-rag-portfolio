@@ -110,8 +110,8 @@ Parameters:
 
   GeminiModelId:
     Type: String
-    Default: gemini-2.5-flash
-    Description: Gemini model ID for grounded generation.
+    Default: gemini-3.8-flash
+    Description: Gemini model ID for grounded generation (2.5 Flash blocked for new API keys).
 
   ChatTokenQuotaMonthly:
     Type: Number
@@ -364,7 +364,7 @@ Resources:
           GEMINI_MODEL_ID: !Ref GeminiModelId
           CHAT_TOKEN_QUOTA_MONTHLY: !Sub "${ChatTokenQuotaMonthly}"
           RAG_TOP_K: "5"
-          RAG_MIN_SCORE: "0.35"
+          RAG_MIN_SCORE: "0.2"
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DocumentsTable

@@ -21,7 +21,7 @@ Core stack:
 * Metadata/session/usage: Amazon DynamoDB
 * Async processing: Amazon SQS + DLQ
 * Embeddings: Voyage `voyage-4-lite` (interim); Amazon Bedrock Titan (target)
-* LLM: Google Gemini 2.5 Flash (interim); Amazon Bedrock Nova/Claude Haiku (target)
+* LLM: Google Gemini 3.8 Flash (interim; 2.5 Flash blocked for new API keys); Amazon Bedrock Nova/Claude Haiku (target)
 * Vector database: Qdrant Cloud
 * IaC: AWS SAM
 * CI/CD: GitHub Actions

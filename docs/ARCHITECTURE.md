@@ -432,7 +432,7 @@ RAG needs **three** jobs: embeddings → vector retrieval (Qdrant) → LLM gener
 | Role | Interim (default while Bedrock access is blocked) | Target (switch back when available) |
 | ---- | ------------------------------------------------- | ----------------------------------- |
 | Embeddings | Voyage `voyage-4-lite` | Amazon Bedrock Titan Text Embeddings V2 |
-| Generation | Google Gemini 2.5 Flash | Amazon Bedrock (Nova Micro/Lite or Claude Haiku) |
+| Generation | Google Gemini 3.8 Flash | Amazon Bedrock (Nova Micro/Lite or Claude Haiku) |
 | Retrieval | Qdrant Cloud (unchanged) | Qdrant Cloud (unchanged) |
 
 **Why interim:** low/free cost at portfolio volume, strong retrieval + grounded-answer quality, HTTP adapters behind the same interfaces so AWS Bedrock can replace either side without changing `packages/core`.
