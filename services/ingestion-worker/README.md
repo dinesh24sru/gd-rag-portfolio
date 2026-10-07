@@ -33,5 +33,7 @@ Deploy with the rest of the stack via `npm run deploy:sam` (builds API + worker)
 * `DOCUMENTS_TABLE_NAME`
 * `DOCUMENTS_BUCKET_NAME`
 * `QDRANT_URL` / `QDRANT_API_KEY` / `QDRANT_COLLECTION`
-* `BEDROCK_EMBEDDING_MODEL_ID`
-* `EMBEDDING_DIMENSIONS`
+* `EMBEDDING_PROVIDER` (`voyage` default, or `bedrock`)
+* `EMBEDDING_DIMENSIONS` (must match active embedding model / Qdrant collection)
+* Voyage path: `VOYAGE_API_KEY`, optional `VOYAGE_EMBEDDING_MODEL_ID`, `VOYAGE_BASE_URL`
+* Bedrock path: `BEDROCK_EMBEDDING_MODEL_ID`

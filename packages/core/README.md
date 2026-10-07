@@ -7,14 +7,18 @@ Domain and application layer.
 * Tenant authorization rules
 * Document upload/delete use cases
 * Ingestion: extract → chunk → embed orchestration (`ingestDocument`)
-* Provider interfaces (`VectorStore`, `EmbeddingProvider`, `DocumentRepository`, `ObjectStorage`)
+* Provider interfaces (`VectorStore`, `EmbeddingProvider`, `LLMProvider`, `DocumentRepository`, `ObjectStorage`)
 * Retrieval → confidence gate → LLM → citation flow (ask path; next)
 
 ## Must not own
 
-* AWS SDK / Qdrant SDK / Bedrock SDK usage
+* AWS SDK / Qdrant / Voyage / Gemini / Bedrock SDK usage
 * HTTP or Lambda event wiring (thin handlers in `services/*`)
 * SAM / infrastructure definitions
+
+## LLM ports
+
+* `LLMProvider.generate({ systemPrompt, userPrompt, maxOutputTokens? })` — grounded generation contract for ask
 
 ## Auth helpers
 

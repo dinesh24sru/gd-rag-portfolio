@@ -11,6 +11,15 @@ export {
   type BedrockEmbeddingOptions,
 } from "./bedrock/embeddings";
 export {
+  createVoyageEmbeddingProvider,
+  type VoyageEmbeddingOptions,
+  type VoyageInputType,
+} from "./voyage/embeddings";
+export {
+  createGeminiLLMProvider,
+  type GeminiLLMOptions,
+} from "./gemini/llm";
+export {
   createQdrantVectorStore,
   chunkPointId,
   type QdrantVectorStoreOptions,

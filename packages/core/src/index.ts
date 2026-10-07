@@ -43,3 +43,5 @@ export type {
 } from "./ingestion/ingestDocument";
 export { parseS3EventRecords } from "./ingestion/parseS3Event";
 export type { S3ObjectCreatedRef } from "./ingestion/parseS3Event";
+
+export type { LLMProvider, LLMRequest, LLMResponse } from "./llm/ports";

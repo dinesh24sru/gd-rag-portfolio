@@ -9,7 +9,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import ../core/node_modules/tsx/dist/loader.mjs --test src/**/*.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.901.0",

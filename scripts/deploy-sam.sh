@@ -82,6 +82,11 @@ fi
 echo "==> Done. Stack outputs:"
 (
   cd infra
-  sam list stack-outputs --config-file samconfig.toml 2>/dev/null \
-    || echo "(Install/update SAM CLI, or run: aws cloudformation describe-stacks --stack-name <name> --query Stacks[0].Outputs)"
+  stack_name="$(sed -n 's/^[[:space:]]*stack_name[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' samconfig.toml | head -n 1)"
+  if [[ -n "${stack_name}" ]]; then
+    sam list stack-outputs --stack-name "${stack_name}" --config-file samconfig.toml
+  else
+    echo "(Could not read stack_name from samconfig.toml)"
+    echo "(Or run: aws cloudformation describe-stacks --stack-name <name> --query Stacks[0].Outputs)"
+  fi
 )

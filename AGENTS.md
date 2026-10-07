@@ -20,19 +20,22 @@ Core stack:
 * Object storage: Amazon S3
 * Metadata/session/usage: Amazon DynamoDB
 * Async processing: Amazon SQS + DLQ
-* Embeddings/LLM: Amazon Bedrock
+* Embeddings: Voyage `voyage-4-lite` (interim); Amazon Bedrock Titan (target)
+* LLM: Google Gemini 2.5 Flash (interim); Amazon Bedrock Nova/Claude Haiku (target)
 * Vector database: Qdrant Cloud
 * IaC: AWS SAM
 * CI/CD: GitHub Actions
 * Observability: CloudWatch
 * Repository: TypeScript pnpm monorepo
 
+Model APIs are selected behind `EmbeddingProvider` / `LLMProvider` (env switch). See `docs/ARCHITECTURE.md` §11. Do not put Voyage/Gemini/Bedrock keys in `apps/web`.
+
 ## Monorepo Layout
 
 ```text
 apps/web                  Next.js UI (Vercel)
 packages/core             Domain + application logic + provider interfaces
-packages/providers        Bedrock, Qdrant, S3, DynamoDB adapters
+packages/providers        Voyage, Gemini, Bedrock, Qdrant, S3, DynamoDB adapters
 packages/shared           Shared types and utilities
 services/api              API Gateway Lambda handlers
 services/ingestion-worker SQS ingestion Lambda worker
@@ -62,7 +65,7 @@ Rules:
 
 * Use Amazon Cognito User Pool with Google as the v1 IdP.
 * Frontend auth uses Cognito Hosted UI + OAuth Authorization Code + PKCE.
-* Do not put Cognito client secrets, AWS credentials, or Qdrant credentials in `apps/web`.
+* Do not put Cognito client secrets, AWS credentials, Qdrant credentials, or Voyage/Gemini/Bedrock API keys in `apps/web`.
 * Google OAuth client secrets are SAM deploy parameters / secrets — never commit them.
 
 ### RAG grounding
@@ -128,7 +131,7 @@ If a finding appears, stop, report the file path and kind of secret (never the v
 
 Keep provider-specific implementations behind interfaces.
 
-The application/domain layer must not directly depend on Qdrant, Bedrock, or other provider SDKs.
+The application/domain layer must not directly depend on Qdrant, Voyage, Gemini, Bedrock, or other provider SDKs.
 
 Important interfaces include:
 
@@ -141,7 +144,7 @@ Important interfaces include:
 
 * Use idempotency keys for ingestion.
 * Use bounded retries with exponential backoff where appropriate.
-* Handle Bedrock throttling/timeouts explicitly.
+* Handle model-provider throttling/timeouts explicitly (Voyage, Gemini, Bedrock).
 * Do not retry permanent validation/configuration errors indefinitely.
 * Keep document processing status observable.
 
@@ -159,7 +162,7 @@ Be stringent. Prefer the cheapest correct option. Do not over-allocate “just i
 * SQS: short retention appropriate to the workload; small payloads (S3 pointer pattern); conservative batch sizes.
 * API Gateway: HTTP API (not REST API). No extra stages/custom domains unless required.
 * CloudWatch: low retention (e.g. 7–14 days); avoid high-cardinality custom metrics and verbose payload logging.
-* Bedrock / LLM: smallest suitable models; hard caps on top-K, context tokens, max output tokens; per-tenant quotas; no speculative second LLM passes; abstain instead of expensive retries.
+* Embeddings / LLM: prefer interim free/low tiers (Voyage + Gemini Flash); when on Bedrock, smallest suitable models. Hard caps on top-K, context tokens, max output tokens; per-tenant quotas; no speculative second LLM passes; abstain instead of expensive retries.
 * Qdrant: free/smallest Cloud tier; minimal dimensions/collections; delete vectors on document delete.
 * Never add caches, queues, or services that bill when idle unless required for a documented feature.
 * Before adding any AWS resource or raising memory/timeout/capacity, state the monthly cost impact and keep the stack inside the $10 worst-case budget.
@@ -214,7 +217,7 @@ Every `apps/web` UI change must stay usable on **phones and iPads/tablets**, not
 * Use least-privilege IAM (per function, per action, per resource). No `*` actions/resources unless unavoidable and documented.
 * Prefer freeless patterns: S3 presigned PUT from the client; DynamoDB single-table or few tables with careful keys; SQS event source mapping with modest batch size and partial batch failure when needed.
 * Bound all retries (SDK max attempts + application backoff). Do not retry validation/auth errors.
-* Set explicit timeouts on Bedrock and HTTP calls; keep Lambda timeout only slightly above the longest bounded downstream call.
+* Set explicit timeouts on Bedrock and other HTTP model calls (Voyage, Gemini); keep Lambda timeout only slightly above the longest bounded downstream call.
 * Bundle with esbuild/tree-shaking; exclude AWS SDK from browsers; keep Lambda artifacts small.
 
 ## Change Discipline

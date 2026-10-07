@@ -15,7 +15,7 @@ Resources in [`template.yaml`](template.yaml):
 * Private S3 bucket for originals (Block Public Access + abort incomplete multipart + ObjectCreated → SQS)
 * DynamoDB documents table (on-demand)
 * Ingestion SQS queue + DLQ
-* Ingestion worker Lambda (extract → chunk → Bedrock embed → Qdrant)
+* Ingestion worker Lambda (extract → chunk → embed → Qdrant)
 
 ## Prerequisites
 
@@ -24,7 +24,10 @@ Resources in [`template.yaml`](template.yaml):
 3. Google Cloud OAuth **Web application** client ID + secret
 4. Node.js 20+ and npm available (run `npm run build:lambdas` before `sam build`)
 5. Qdrant Cloud URL + API key (for indexing)
-6. Bedrock model access in the deploy region for `amazon.titan-embed-text-v2:0` (or your override)
+6. **Embeddings (interim):** Voyage API key (`voyage-4-lite`). **Target:** Bedrock model access in the deploy region for `amazon.titan-embed-text-v2:0`
+7. **LLM / ask path (interim):** Gemini API key (Google AI Studio, Gemini 2.5 Flash). **Target:** Bedrock LLM access (Nova Micro/Lite or Claude Haiku)
+
+Provider selection and switch-back rules: `docs/ARCHITECTURE.md` §11. Never commit Voyage/Gemini/Bedrock secrets; pass them only as SAM parameters / Lambda env.
 
 ## Google Cloud OAuth setup
 
@@ -75,11 +78,16 @@ sam build
 sam deploy
 ```
 
-Add these SAM parameters (see `samconfig.toml.example`) for ingestion:
+Add these SAM parameters (see `samconfig.toml.example`) for ingestion / ask:
 
 * `QdrantUrl` / `QdrantApiKey` / `QdrantCollectionName`
-* `BedrockEmbeddingModelId` (default Titan embed v2)
-* `EmbeddingDimensions` (default `256`)
+* `EmbeddingProvider` (`voyage` default, or `bedrock`)
+* `VoyageApiKey` / `VoyageEmbeddingModelId` (when `voyage`)
+* `EmbeddingDimensions` (Voyage default `1024`; Titan often `256`)
+* `LlmProvider` (`gemini` default) + `GeminiApiKey` / `GeminiModelId` (ask path; keyed on API Lambda)
+* Target switch-back: `EmbeddingProvider=bedrock`, `BedrockEmbeddingModelId`, `LlmProvider=bedrock`
+
+Changing embedding provider or dimensions requires a compatible Qdrant collection and re-ingest.
 
 Guided first-time deploy (optional):
 

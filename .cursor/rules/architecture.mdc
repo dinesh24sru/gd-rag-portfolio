@@ -10,7 +10,7 @@ alwaysApply: true
 ## Required
 
 * Keep the backend serverless in a single TypeScript pnpm monorepo.
-* API Gateway HTTP API + Lambda; S3 docs; SQS ingestion; DynamoDB metadata/sessions/usage; Bedrock via interfaces; Qdrant via `VectorStore`.
+* API Gateway HTTP API + Lambda; S3 docs; SQS ingestion; DynamoDB metadata/sessions/usage; embeddings/LLM via `EmbeddingProvider` / `LLMProvider` (interim Voyage + Gemini; target Bedrock); Qdrant via `VectorStore`.
 * Thin handlers in `services/*`; logic in `packages/core`; AWS/provider SDKs only in `packages/providers`.
 
 ## Cost (hard budget)
@@ -22,7 +22,7 @@ Near-zero portfolio stack; **worst case ≤ $10/month**. Be stringent on every r
 * DynamoDB on-demand only; no DAX/global tables/extra GSIs.
 * S3 private + lifecycle; SQS small payloads; HTTP API not REST API.
 * CloudWatch short retention; no chatty custom metrics or document body logs.
-* Bedrock: smallest suitable models; hard token/top-K/quota caps; abstain over expensive retries.
+* Embeddings/LLM: prefer Voyage + Gemini free/low tiers at portfolio volume; when on Bedrock, smallest suitable models. Hard token/top-K/quota caps; abstain over expensive retries.
 * Before adding/raising capacity, state monthly cost impact and stay inside budget.
 
 ## Coding / AWS SDK

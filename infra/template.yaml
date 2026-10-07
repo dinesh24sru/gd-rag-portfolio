@@ -58,17 +58,60 @@ Parameters:
     Default: gd-rag-chunks
     Description: Qdrant collection name for document chunks.
 
+  EmbeddingProvider:
+    Type: String
+    Default: voyage
+    AllowedValues:
+      - voyage
+      - bedrock
+    Description: Embedding backend (interim voyage; target bedrock).
+
+  VoyageApiKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: Voyage API key (required when EmbeddingProvider=voyage).
+
+  VoyageEmbeddingModelId:
+    Type: String
+    Default: voyage-4-lite
+    Description: Voyage embedding model ID.
+
+  VoyageBaseUrl:
+    Type: String
+    Default: https://api.voyageai.com/v1
+    Description: Voyage embeddings API base URL (override for Atlas-scoped keys if needed).
+
   BedrockEmbeddingModelId:
     Type: String
     Default: amazon.titan-embed-text-v2:0
-    Description: Bedrock embedding model ID (smallest suitable Titan embed).
+    Description: Bedrock embedding model ID (when EmbeddingProvider=bedrock).
 
   EmbeddingDimensions:
     Type: Number
-    Default: 256
+    Default: 1024
     MinValue: 256
-    MaxValue: 1024
-    Description: Titan embed output dimensions (keep small for cost).
+    MaxValue: 2048
+    Description: Embedding output dimensions (voyage-4-lite default 1024; Titan often 256).
+
+  LlmProvider:
+    Type: String
+    Default: gemini
+    AllowedValues:
+      - gemini
+      - bedrock
+    Description: LLM backend for ask path (interim gemini; target bedrock).
+
+  GeminiApiKey:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: Google Gemini API key (required when LlmProvider=gemini).
+
+  GeminiModelId:
+    Type: String
+    Default: gemini-2.5-flash
+    Description: Gemini model ID for grounded generation.
 
 Resources:
   UserPool:
@@ -302,6 +345,9 @@ Resources:
           QDRANT_API_KEY: !Ref QdrantApiKey
           QDRANT_COLLECTION: !Ref QdrantCollectionName
           EMBEDDING_DIMENSIONS: !Sub "${EmbeddingDimensions}"
+          LLM_PROVIDER: !Ref LlmProvider
+          GEMINI_API_KEY: !Ref GeminiApiKey
+          GEMINI_MODEL_ID: !Ref GeminiModelId
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DocumentsTable
@@ -381,8 +427,12 @@ Resources:
           QDRANT_URL: !Ref QdrantUrl
           QDRANT_API_KEY: !Ref QdrantApiKey
           QDRANT_COLLECTION: !Ref QdrantCollectionName
-          BEDROCK_EMBEDDING_MODEL_ID: !Ref BedrockEmbeddingModelId
+          EMBEDDING_PROVIDER: !Ref EmbeddingProvider
           EMBEDDING_DIMENSIONS: !Sub "${EmbeddingDimensions}"
+          VOYAGE_API_KEY: !Ref VoyageApiKey
+          VOYAGE_EMBEDDING_MODEL_ID: !Ref VoyageEmbeddingModelId
+          VOYAGE_BASE_URL: !Ref VoyageBaseUrl
+          BEDROCK_EMBEDDING_MODEL_ID: !Ref BedrockEmbeddingModelId
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DocumentsTable

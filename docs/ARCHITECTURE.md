@@ -67,7 +67,9 @@ Initial target:
            Extract     Chunk     Embed
                                   │
                                   ▼
-                            Amazon Bedrock
+                     EmbeddingProvider
+                     (interim: Voyage;
+                      target: Bedrock Titan)
                                   │
                                   ▼
                               Qdrant Cloud
@@ -86,7 +88,7 @@ Lambda
  ├── authenticate/authorize
  ├── tenant-scoped retrieval
  ├── confidence gate
- ├── Bedrock LLM
+ ├── LLMProvider (interim: Gemini Flash; target: Bedrock)
  └── citation validation
  │
  ▼
@@ -109,7 +111,8 @@ Response
 | SQS            | Asynchronous ingestion                                  | `infra` |
 | SQS DLQ        | Failed/poison messages                                  | `infra` |
 | DynamoDB       | Documents, sessions, messages, usage, processing status | `infra` + `packages/providers` |
-| Bedrock        | Embeddings and LLM generation                           | `packages/providers` |
+| Embeddings     | Chunk/query vectors (`EmbeddingProvider`)               | `packages/providers` |
+| LLM            | Grounded answer generation (`LLMProvider`)              | `packages/providers` |
 | Qdrant         | Vector storage and similarity search                    | `packages/providers` |
 | CloudWatch     | Logs, metrics, operational visibility                   | `infra` |
 | SAM            | Infrastructure definition                               | `infra` |
@@ -408,17 +411,38 @@ interface LLMProvider {
 }
 ```
 
-Current implementations:
+### Model provider decision (v1)
+
+RAG needs **three** jobs: embeddings → vector retrieval (Qdrant) → LLM generation. Embeddings and generation are separate model APIs (not two LLMs). LangChain is **out of scope** for v1; orchestration stays in `packages/core`.
+
+| Role | Interim (default while Bedrock access is blocked) | Target (switch back when available) |
+| ---- | ------------------------------------------------- | ----------------------------------- |
+| Embeddings | Voyage `voyage-4-lite` | Amazon Bedrock Titan Text Embeddings V2 |
+| Generation | Google Gemini 2.5 Flash | Amazon Bedrock (Nova Micro/Lite or Claude Haiku) |
+| Retrieval | Qdrant Cloud (unchanged) | Qdrant Cloud (unchanged) |
+
+**Why interim:** low/free cost at portfolio volume, strong retrieval + grounded-answer quality, HTTP adapters behind the same interfaces so AWS Bedrock can replace either side without changing `packages/core`.
+
+**Switching:**
+
+* Select via env (e.g. `EMBEDDING_PROVIDER=voyage|bedrock`, `LLM_PROVIDER=gemini|bedrock`).
+* Changing the **LLM** does not require re-indexing.
+* Changing the **embedding** model or dimensions requires a new/compatible Qdrant collection and **re-ingest** (vectors are not interchangeable across models).
+* API keys (Voyage, Gemini) and Bedrock IAM stay in SAM parameters / Lambda env — never in `apps/web` or git.
+
+Adapters:
 
 ```text
 VectorStore
   └── QdrantVectorStore
 
 EmbeddingProvider
-  └── BedrockEmbeddingProvider
+  ├── VoyageEmbeddingProvider   (interim default; wired in ingestion worker)
+  └── BedrockEmbeddingProvider  (target; env switch)
 
 LLMProvider
-  └── BedrockLLMProvider
+  ├── GeminiLLMProvider         (interim; adapter ready, ask route next)
+  └── BedrockLLMProvider        (target; not yet implemented)
 ```
 
 This allows infrastructure providers to change without changing core application logic.
@@ -449,9 +473,9 @@ Handlers must distinguish:
 
 Do not retry permanent errors indefinitely.
 
-### Bedrock
+### Model providers (Voyage / Gemini / Bedrock)
 
-Handle throttling and transient failures using bounded exponential backoff.
+Handle throttling, timeouts, and transient HTTP/SDK failures with bounded exponential backoff. Do not retry permanent auth/config errors.
 
 A circuit breaker may be introduced around the LLM provider when the implementation requires it.
 
@@ -464,6 +488,7 @@ Required controls:
 * S3 Block Public Access.
 * Short-lived presigned upload/download URLs.
 * No vector database credentials in frontend code.
+* No Voyage, Gemini, Bedrock, or other model API keys in frontend code.
 * Secrets stored outside source control.
 * Server-side tenant authorization.
 * Upload size/type validation.
@@ -494,17 +519,18 @@ Default allocations:
 * API Gateway: HTTP API
 * CloudWatch logs: short retention (7–14 days)
 
-Primary variable cost is LLM/embeddings (Bedrock) and any vector tier — not Lambda/API at low volume.
+Primary variable cost is embeddings + LLM tokens (interim: Voyage + Gemini free/low tiers; target: Bedrock) and any vector tier — not Lambda/API at low volume.
 
 Control model cost through:
 
-* smallest suitable Bedrock models;
+* prefer free/low tiers at portfolio volume (Voyage embed credits, Gemini Flash free tier); when on Bedrock, smallest suitable models;
 * limited retrieval top-K;
 * bounded context size;
 * output token limits;
 * per-tenant quotas;
 * abstention instead of speculative retries;
-* avoiding unnecessary second-pass LLM calls.
+* avoiding unnecessary second-pass LLM calls;
+* no LangChain or other heavy orchestration frameworks in Lambda (keeps bundles small).
 
 ---
 
@@ -550,7 +576,7 @@ gd-rag-portfolio/
 │   └── web/                      # Next.js UI (deployed to Vercel)
 ├── packages/
 │   ├── core/                     # Domain + application logic and provider interfaces
-│   ├── providers/                # Qdrant, Bedrock, S3, DynamoDB implementations
+│   ├── providers/                # Qdrant, Voyage/Gemini/Bedrock, S3, DynamoDB adapters
 │   └── shared/                   # Shared types, errors, config helpers
 ├── services/
 │   ├── api/                      # API Gateway → Lambda HTTP handlers
@@ -566,7 +592,7 @@ gd-rag-portfolio/
 | ---- | ---- | ------------ |
 | `apps/web` | UI, auth UX, client API calls | AWS credentials, Qdrant credentials, vector search, LLM calls |
 | `packages/core` | tenant rules, RAG flow, abstention, citations, use cases, interfaces | Provider SDKs, HTTP/Lambda wiring, SAM resources |
-| `packages/providers` | Bedrock/Qdrant/S3/DynamoDB adapters behind interfaces | Business policy decisions |
+| `packages/providers` | Voyage/Gemini/Bedrock/Qdrant/S3/DynamoDB adapters behind interfaces | Business policy decisions |
 | `packages/shared` | cross-cutting types/utilities | Feature-specific business logic |
 | `services/api` | auth context extraction, input validation, HTTP mapping | Heavy business logic (delegate to `packages/core`) |
 | `services/ingestion-worker` | SQS event handling, idempotency at the edge | Direct SDK usage outside provider adapters |
@@ -631,12 +657,12 @@ Backend and frontend deploy independently, but share the same repository, contra
 5. SQS ingestion
 6. Text extraction
 7. Chunking
-8. Bedrock embeddings
+8. Embeddings via `EmbeddingProvider` (interim Voyage; Bedrock Titan when access is available)
 9. Qdrant indexing
 10. Document status
 11. Tenant-filtered retrieval
 12. Confidence gate
-13. Bedrock answer generation
+13. Answer generation via `LLMProvider` (interim Gemini Flash; Bedrock when access is available)
 14. Citations
 15. Chat sessions
 16. DLQ/retry handling
@@ -651,7 +677,8 @@ Backend and frontend deploy independently, but share the same repository, contra
 * reranking
 * semantic caching
 * second-pass faithfulness model
-* multiple LLM providers
+* runtime multi-provider routing / automatic fallbacks (v1 uses env-selected adapters only)
+* LangChain or equivalent orchestration frameworks
 * multiple vector providers
 * advanced analytics
 * billing

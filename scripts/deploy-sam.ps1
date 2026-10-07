@@ -55,9 +55,18 @@ try {
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   Write-Host "==> Done. Stack outputs:"
-  sam list stack-outputs --config-file samconfig.toml
-  if ($LASTEXITCODE -ne 0) {
-    Write-Host "(Or run: aws cloudformation describe-stacks --query Stacks[0].Outputs)"
+  $stackName = $null
+  foreach ($line in Get-Content "samconfig.toml") {
+    if ($line -match '^\s*stack_name\s*=\s*"([^"]+)"') {
+      $stackName = $Matches[1]
+      break
+    }
+  }
+  if ($stackName) {
+    sam list stack-outputs --stack-name $stackName --config-file samconfig.toml
+  }
+  if (-not $stackName -or $LASTEXITCODE -ne 0) {
+    Write-Host "(Or run: aws cloudformation describe-stacks --stack-name <name> --query Stacks[0].Outputs)"
   }
 }
 finally {
