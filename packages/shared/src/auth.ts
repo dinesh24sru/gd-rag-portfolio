@@ -19,6 +19,7 @@ export type ApiErrorCode =
   | "BAD_REQUEST"
   | "NOT_FOUND"
   | "QUOTA_EXCEEDED"
+  | "PROVIDER_UNAVAILABLE"
   | "INTERNAL";
 
 export type ApiErrorBody = {

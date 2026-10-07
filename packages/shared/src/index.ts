@@ -6,6 +6,7 @@ export {
   NotFoundError,
   ValidationError,
   QuotaExceededError,
+  ProviderUnavailableError,
   PermanentIngestionError,
 } from "./errors";
 export type {

@@ -52,6 +52,16 @@ export class QuotaExceededError extends AppError {
   }
 }
 
+/** Upstream model/embedding provider overloaded or rate-limited after bounded retries. */
+export class ProviderUnavailableError extends AppError {
+  constructor(
+    message = "The AI provider is temporarily unavailable. Please try again in a moment.",
+  ) {
+    super("PROVIDER_UNAVAILABLE", message, 503);
+    this.name = "ProviderUnavailableError";
+  }
+}
+
 /** Permanent ingestion failure — do not retry via SQS; mark document FAILED. */
 export class PermanentIngestionError extends Error {
   constructor(message: string) {

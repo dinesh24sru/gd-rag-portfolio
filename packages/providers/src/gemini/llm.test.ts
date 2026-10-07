@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { ProviderUnavailableError } from "@gd-rag/shared";
 import { createGeminiLLMProvider } from "./llm";
 
 describe("createGeminiLLMProvider", () => {
@@ -47,7 +48,7 @@ describe("createGeminiLLMProvider", () => {
       maxOutputTokens: 128,
     });
 
-    assert.match(url, /models\/gemini-2\.5-flash:generateContent/);
+    assert.match(url, /models\/gemini-3\.8-flash:generateContent/);
     assert.match(url, /key=gem-key/);
     assert.deepEqual(body, {
       systemInstruction: { parts: [{ text: "Only use context." }] },
@@ -62,12 +63,74 @@ describe("createGeminiLLMProvider", () => {
     });
   });
 
-  it("surfaces non-OK responses", async () => {
-    const fetchImpl: typeof fetch = async () =>
-      new Response("quota", { status: 403 });
+  it("retries transient 503 then succeeds", async () => {
+    let calls = 0;
+    const fetchImpl: typeof fetch = async () => {
+      calls += 1;
+      if (calls < 3) {
+        return new Response(
+          JSON.stringify({
+            error: { message: "high demand", status: "UNAVAILABLE" },
+          }),
+          { status: 503 },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: "ok after retry" }] } }],
+          usageMetadata: {
+            promptTokenCount: 1,
+            candidatesTokenCount: 1,
+            totalTokenCount: 2,
+          },
+        }),
+        { status: 200 },
+      );
+    };
+
     const provider = createGeminiLLMProvider({
       apiKey: "gem-key",
       fetchImpl,
+      sleepImpl: async () => undefined,
+    });
+
+    const result = await provider.generate({
+      systemPrompt: "sys",
+      userPrompt: "user",
+    });
+    assert.equal(result.text, "ok after retry");
+    assert.equal(calls, 3);
+  });
+
+  it("maps exhausted 503 retries to ProviderUnavailableError", async () => {
+    const fetchImpl: typeof fetch = async () =>
+      new Response("busy", { status: 503 });
+    const provider = createGeminiLLMProvider({
+      apiKey: "gem-key",
+      fetchImpl,
+      sleepImpl: async () => undefined,
+    });
+    await assert.rejects(
+      () =>
+        provider.generate({
+          systemPrompt: "sys",
+          userPrompt: "user",
+        }),
+      (err: unknown) =>
+        err instanceof ProviderUnavailableError && err.statusCode === 503,
+    );
+  });
+
+  it("does not retry permanent 403 errors", async () => {
+    let calls = 0;
+    const fetchImpl: typeof fetch = async () => {
+      calls += 1;
+      return new Response("quota", { status: 403 });
+    };
+    const provider = createGeminiLLMProvider({
+      apiKey: "gem-key",
+      fetchImpl,
+      sleepImpl: async () => undefined,
     });
     await assert.rejects(
       () =>
@@ -77,5 +140,6 @@ describe("createGeminiLLMProvider", () => {
         }),
       /Gemini generateContent failed \(403\)/,
     );
+    assert.equal(calls, 1);
   });
 });
