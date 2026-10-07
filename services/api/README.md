@@ -21,12 +21,16 @@ Thin AWS Lambda handlers behind API Gateway HTTP API.
 | ------ | ---- | ---- | -------- |
 | GET | `/health` | none | `{ ok: true }` |
 | GET | `/me` | Cognito JWT | `{ tenantId, sub, email }` |
+| GET | `/usage` | Cognito JWT | `{ period, usedTokens, quotaTokens, remainingTokens }` |
+| POST | `/ask` | Cognito JWT | `{ answer, abstained, citations, usage }` |
 | POST | `/documents/upload-url` | Cognito JWT | `{ document, uploadUrl, expiresInSeconds }` |
 | GET | `/documents` | Cognito JWT | `{ documents: [...] }` |
 | GET | `/documents/{documentId}` | Cognito JWT | `{ document }` |
-| DELETE | `/documents/{documentId}` | Cognito JWT | `204` (deletes S3 object + DynamoDB row) |
+| DELETE | `/documents/{documentId}` | Cognito JWT | `204` (Qdrant → S3 → DynamoDB) |
 
 `tenantId` is always Cognito `sub` from verified claims. Uploads: PDF / TXT / Markdown, max 10 MB, max 5 documents per tenant; browser PUTs to the presigned S3 URL.
+
+`POST /ask` embeds the question (Voyage `input_type=query`), tenant-filters Qdrant, confidence-gates, then Gemini with citations/abstain. Chat token quota is enforced before the LLM; gate abstentions do not consume tokens. Response always includes updated `usage`.
 
 ## Local build
 

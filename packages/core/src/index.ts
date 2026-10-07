@@ -47,6 +47,18 @@ export type { S3ObjectCreatedRef } from "./ingestion/parseS3Event";
 
 export type { LLMProvider, LLMRequest, LLMResponse, LLMTokenUsage } from "./llm/ports";
 
+export { ask } from "./rag/ask";
+export type { AskDeps } from "./rag/ask";
+export {
+  DEFAULT_RAG_CONFIG,
+  resolveRagConfig,
+} from "./rag/config";
+export type { RagConfig } from "./rag/config";
+export { evaluateRetrievalConfidence } from "./rag/confidenceGate";
+export type { ConfidenceGateResult } from "./rag/confidenceGate";
+export { parseGroundedAnswer } from "./rag/citations";
+export { buildSystemPrompt, buildUserPrompt, ABSTAIN_PREFIX } from "./rag/prompts";
+
 export type { UsageRepository } from "./usage/ports";
 export {
   getChatUsage,

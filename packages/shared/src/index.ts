@@ -15,4 +15,5 @@ export type {
   CreateUploadResponse,
 } from "./documents";
 export type { ChatUsageSnapshot, GetUsageResponse } from "./usage";
+export type { AskRequest, AskResponse, Citation } from "./chat";
 export { logInfo, logWarn, logError } from "./log";

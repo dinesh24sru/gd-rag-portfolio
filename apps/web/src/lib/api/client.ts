@@ -36,10 +36,25 @@ export type ChatUsageSnapshot = {
   remainingTokens: number;
 };
 
+export type Citation = {
+  documentId: string;
+  chunkId: string;
+  score: number;
+  excerpt: string;
+};
+
+export type AskResponse = {
+  answer: string;
+  abstained: boolean;
+  citations: Citation[];
+  usage: ChatUsageSnapshot;
+};
+
 export type ApiClientError = {
   status: number;
   code?: string;
   message: string;
+  usage?: ChatUsageSnapshot;
 };
 
 function getApiBaseUrl(): string {
@@ -60,11 +75,13 @@ async function parseError(response: Response): Promise<ApiClientError> {
   try {
     const body = (await response.json()) as {
       error?: { code?: string; message?: string };
+      usage?: ChatUsageSnapshot;
     };
     return {
       status: response.status,
       code: body.error?.code,
       message: body.error?.message ?? response.statusText,
+      usage: body.usage,
     };
   } catch {
     return {
@@ -137,6 +154,14 @@ export async function createUploadUrl(input: {
 
 export async function fetchUsage(): Promise<ChatUsageSnapshot> {
   return apiFetch<ChatUsageSnapshot>("/usage");
+}
+
+export async function askQuestion(question: string): Promise<AskResponse> {
+  return apiFetch<AskResponse>("/ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question }),
+  });
 }
 
 export async function listDocuments(): Promise<DocumentRecord[]> {

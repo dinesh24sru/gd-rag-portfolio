@@ -2,6 +2,7 @@
 
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import LinearProgress from "@mui/material/LinearProgress";
@@ -10,14 +11,25 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  askQuestion,
   fetchUsage,
   isApiConfigured,
+  type AskResponse,
   type ChatUsageSnapshot,
+  type Citation,
   type ApiClientError,
 } from "@/lib/api/client";
 import { palette } from "@/theme/theme";
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  abstained?: boolean;
+  citations?: Citation[];
+};
 
 function formatTokens(n: number): string {
   return n.toLocaleString();
@@ -74,11 +86,102 @@ function QuotaBar({ usage }: { usage: ChatUsageSnapshot }) {
   );
 }
 
+function CitationList({ citations }: { citations: Citation[] }) {
+  if (citations.length === 0) {
+    return null;
+  }
+  return (
+    <Stack spacing={1} sx={{ mt: 1.25 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+        Sources
+      </Typography>
+      {citations.map((c) => (
+        <Box
+          key={`${c.documentId}:${c.chunkId}`}
+          sx={{
+            pl: 1.25,
+            borderLeft: `3px solid ${palette.slate}`,
+          }}
+        >
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: "block", overflowWrap: "anywhere" }}
+          >
+            {c.documentId} · score {c.score.toFixed(2)}
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ mt: 0.25, overflowWrap: "anywhere", color: palette.ink }}
+          >
+            {c.excerpt}
+          </Typography>
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
+function MessageBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+  return (
+    <Box
+      sx={{
+        alignSelf: isUser ? "flex-end" : "flex-start",
+        maxWidth: { xs: "92%", sm: "85%" },
+      }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          px: { xs: 1.5, sm: 2 },
+          py: { xs: 1.25, sm: 1.5 },
+          borderRadius: 3,
+          bgcolor: isUser ? palette.slate : palette.lightSurface,
+          color: isUser ? palette.onAccent : palette.ink,
+          border: isUser ? "none" : "1px solid rgba(79,109,122,0.16)",
+        }}
+      >
+        <Typography
+          variant="body1"
+          sx={{
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+            fontSize: { xs: "0.95rem", sm: "1rem" },
+          }}
+        >
+          {message.text}
+        </Typography>
+        {message.abstained ? (
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              mt: 1,
+              opacity: 0.85,
+              color: isUser ? palette.cream : palette.slate,
+            }}
+          >
+            Abstained — insufficient evidence in your documents.
+          </Typography>
+        ) : null}
+        {!isUser && message.citations ? (
+          <CitationList citations={message.citations} />
+        ) : null}
+      </Paper>
+    </Box>
+  );
+}
+
 export default function ChatPage() {
   const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [usage, setUsage] = useState<ChatUsageSnapshot | null>(null);
   const [usageError, setUsageError] = useState<string | null>(null);
   const [usageLoading, setUsageLoading] = useState(true);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   const refreshUsage = useCallback(async () => {
     if (!isApiConfigured()) {
@@ -102,7 +205,59 @@ export default function ChatPage() {
     void refreshUsage();
   }, [refreshUsage]);
 
+  useEffect(() => {
+    const el = listRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages, sending]);
+
   const quotaExhausted = usage !== null && usage.remainingTokens <= 0;
+  const canSend = Boolean(draft.trim()) && !sending && !quotaExhausted;
+
+  const handleSend = useCallback(async () => {
+    const question = draft.trim();
+    if (!question || sending || quotaExhausted) {
+      return;
+    }
+    if (!isApiConfigured()) {
+      setSendError("API is not configured.");
+      return;
+    }
+
+    const userMessage: ChatMessage = {
+      id: `u-${Date.now()}`,
+      role: "user",
+      text: question,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setDraft("");
+    setSendError(null);
+    setSending(true);
+
+    try {
+      const result: AskResponse = await askQuestion(question);
+      setUsage(result.usage);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          text: result.answer,
+          abstained: result.abstained,
+          citations: result.citations,
+        },
+      ]);
+    } catch (err) {
+      const apiErr = err as ApiClientError;
+      if (apiErr?.usage) {
+        setUsage(apiErr.usage);
+      }
+      setSendError(apiErr?.message ?? "Ask failed. Try again.");
+    } finally {
+      setSending(false);
+    }
+  }, [draft, sending, quotaExhausted]);
 
   return (
     <Stack
@@ -123,8 +278,8 @@ export default function ChatPage() {
           Chat
         </Typography>
         <Typography color="text.secondary" sx={{ fontSize: { xs: "0.95rem", sm: "1rem" } }}>
-          Ask questions about your uploaded documents. Retrieval, confidence gating,
-          and citations will connect here once the API is live.
+          Ask questions about your uploaded documents. Answers are grounded in retrieved
+          chunks, with citations, or abstain when evidence is weak.
         </Typography>
       </Stack>
 
@@ -152,27 +307,64 @@ export default function ChatPage() {
         }}
       >
         <Box
+          ref={listRef}
           sx={{
             flexGrow: 1,
             minHeight: 0,
-            display: "grid",
-            placeItems: "center",
-            textAlign: "center",
-            px: { xs: 1, sm: 2 },
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
             overflow: "auto",
+            px: { xs: 0.25, sm: 0.5 },
           }}
         >
-          <Stack spacing={1} sx={{ maxWidth: 420 }}>
-            <Typography variant="h6">No messages yet</Typography>
-            <Typography color="text.secondary">
-              When documents are READY, answers will be grounded in retrieved chunks
-              and will abstain if evidence is insufficient.
-              {quotaExhausted
-                ? " Your monthly chat token quota is used up — try again next UTC month."
-                : null}
-            </Typography>
-          </Stack>
+          {messages.length === 0 && !sending ? (
+            <Box
+              sx={{
+                flexGrow: 1,
+                display: "grid",
+                placeItems: "center",
+                textAlign: "center",
+                px: { xs: 1, sm: 2 },
+              }}
+            >
+              <Stack spacing={1} sx={{ maxWidth: 420 }}>
+                <Typography variant="h6">No messages yet</Typography>
+                <Typography color="text.secondary">
+                  When documents are READY, answers are grounded in retrieved chunks and
+                  abstain if evidence is insufficient.
+                  {quotaExhausted
+                    ? " Your monthly chat token quota is used up — try again next UTC month."
+                    : null}
+                </Typography>
+              </Stack>
+            </Box>
+          ) : (
+            <>
+              {messages.map((m) => (
+                <MessageBubble key={m.id} message={m} />
+              ))}
+              {sending ? (
+                <Stack direction="row" spacing={1} sx={{ alignItems: "center", px: 0.5 }}>
+                  <CircularProgress size={18} sx={{ color: palette.slate }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Retrieving and generating…
+                  </Typography>
+                </Stack>
+              ) : null}
+            </>
+          )}
         </Box>
+
+        {sendError ? (
+          <Typography
+            variant="body2"
+            color="error"
+            sx={{ mt: 1.5, overflowWrap: "anywhere" }}
+          >
+            {sendError}
+          </Typography>
+        ) : null}
 
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -184,7 +376,13 @@ export default function ChatPage() {
             placeholder="Ask about your documents…"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            disabled={quotaExhausted}
+            disabled={quotaExhausted || sending}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void handleSend();
+              }
+            }}
             slotProps={{
               input: {
                 sx: {
@@ -198,7 +396,8 @@ export default function ChatPage() {
                     <IconButton
                       color="primary"
                       aria-label="Send message"
-                      disabled={!draft.trim() || quotaExhausted}
+                      disabled={!canSend}
+                      onClick={() => void handleSend()}
                       sx={{
                         bgcolor: palette.orange,
                         color: palette.onAccent,
@@ -217,7 +416,8 @@ export default function ChatPage() {
           />
           <Button
             variant="contained"
-            disabled={!draft.trim() || quotaExhausted}
+            disabled={!canSend}
+            onClick={() => void handleSend()}
             sx={{ display: { xs: "none", sm: "inline-flex" }, minWidth: 120 }}
           >
             Send

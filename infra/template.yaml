@@ -342,7 +342,10 @@ Resources:
       FunctionName: !Sub "${AWS::StackName}-api"
       CodeUri: ../services/api/dist/
       Handler: handler.handler
-      Description: GD RAG HTTP API (auth + document upload)
+      Description: GD RAG HTTP API (auth, documents, ask)
+      # Ask path: Voyage query embed + Qdrant + Gemini; keep above longest bounded call.
+      Timeout: 45
+      MemorySize: 256
       Environment:
         Variables:
           DOCUMENTS_TABLE_NAME: !Ref DocumentsTable
@@ -350,16 +353,28 @@ Resources:
           QDRANT_URL: !Ref QdrantUrl
           QDRANT_API_KEY: !Ref QdrantApiKey
           QDRANT_COLLECTION: !Ref QdrantCollectionName
+          EMBEDDING_PROVIDER: !Ref EmbeddingProvider
           EMBEDDING_DIMENSIONS: !Sub "${EmbeddingDimensions}"
+          VOYAGE_API_KEY: !Ref VoyageApiKey
+          VOYAGE_EMBEDDING_MODEL_ID: !Ref VoyageEmbeddingModelId
+          VOYAGE_BASE_URL: !Ref VoyageBaseUrl
+          BEDROCK_EMBEDDING_MODEL_ID: !Ref BedrockEmbeddingModelId
           LLM_PROVIDER: !Ref LlmProvider
           GEMINI_API_KEY: !Ref GeminiApiKey
           GEMINI_MODEL_ID: !Ref GeminiModelId
           CHAT_TOKEN_QUOTA_MONTHLY: !Sub "${ChatTokenQuotaMonthly}"
+          RAG_TOP_K: "5"
+          RAG_MIN_SCORE: "0.35"
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DocumentsTable
         - S3CrudPolicy:
             BucketName: !Ref DocumentsBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockEmbeddingModelId}"
       Events:
         Health:
           Type: HttpApi
@@ -415,6 +430,14 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /documents/{documentId}
             Method: DELETE
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+        Ask:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /ask
+            Method: POST
             Auth:
               Authorizer: CognitoJwtAuthorizer
 

@@ -3,6 +3,7 @@ import {
   NotFoundError,
   ValidationError,
   logInfo,
+  type AskRequest,
   type CreateUploadRequest,
 } from "@gd-rag/shared";
 import { extractAuthContext } from "./auth";
@@ -86,6 +87,24 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
           remaining: usage.remainingTokens,
         });
         return ok(usage);
+      }
+
+      case "POST /ask": {
+        const auth = extractAuthContext(event);
+        const body = parseJsonBody<AskRequest>(event);
+        logInfo("api.ask_request", {
+          tenantId: auth.tenantId,
+          questionChars: body.question?.trim()?.length ?? 0,
+        });
+        const result = await getApiWiring().chat.ask(auth, body);
+        logInfo("api.ask_ok", {
+          tenantId: auth.tenantId,
+          abstained: result.abstained,
+          citationCount: result.citations.length,
+          used: result.usage.usedTokens,
+          remaining: result.usage.remainingTokens,
+        });
+        return ok(result);
       }
 
       default: {

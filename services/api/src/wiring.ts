@@ -1,4 +1,5 @@
 import {
+  ask,
   assertChatQuota,
   createUpload,
   deleteDocument,
@@ -7,24 +8,33 @@ import {
   listDocuments,
   recordChatTokens,
   resolveChatTokenQuotaMonthly,
+  resolveRagConfig,
   withChatQuota,
+  type AskDeps,
   type ChatQuotaRunResult,
   type ChatUsageDeps,
   type CreateUploadDeps,
   type DocumentRepository,
+  type EmbeddingProvider,
+  type LLMProvider,
   type LLMTokenUsage,
   type ObjectStorage,
   type UsageRepository,
   type VectorStore,
 } from "@gd-rag/core";
 import {
+  createBedrockEmbeddingProvider,
   createDynamoDocumentRepository,
   createDynamoUsageRepository,
+  createGeminiLLMProvider,
   createQdrantVectorStore,
   createS3ObjectStorage,
+  createVoyageEmbeddingProvider,
 } from "@gd-rag/providers";
 import type { AuthContext } from "@gd-rag/core";
 import type {
+  AskRequest,
+  AskResponse,
   ChatUsageSnapshot,
   CreateUploadRequest,
   DocumentRecord,
@@ -52,9 +62,14 @@ export type UsageServices = {
   ) => Promise<ChatQuotaRunResult<T>>;
 };
 
+export type ChatServices = {
+  ask: (auth: AuthContext, input: AskRequest) => Promise<AskResponse>;
+};
+
 export type ApiWiring = {
   documents: DocumentServices;
   usage: UsageServices;
+  chat: ChatServices;
 };
 
 let cached: ApiWiring | undefined;
@@ -73,15 +88,56 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-function requiredVectorStore(): VectorStore {
-  const url = requiredEnv("QDRANT_URL");
-  const apiKey = requiredEnv("QDRANT_API_KEY");
-  const collection = requiredEnv("QDRANT_COLLECTION");
-  const dimensions = Number(process.env.EMBEDDING_DIMENSIONS ?? "256");
-  if (!Number.isFinite(dimensions) || dimensions <= 0) {
-    throw new Error("EMBEDDING_DIMENSIONS must be a positive number");
+function parseDimensions(provider: string): number {
+  const fallback = provider === "voyage" ? "1024" : "256";
+  const dimensions = Number(process.env.EMBEDDING_DIMENSIONS ?? fallback);
+  if (!Number.isFinite(dimensions) || dimensions < 256) {
+    throw new Error("EMBEDDING_DIMENSIONS must be a number >= 256");
   }
-  return createQdrantVectorStore({ url, apiKey, collection, dimensions });
+  return dimensions;
+}
+
+function requiredVectorStore(dimensions: number): VectorStore {
+  return createQdrantVectorStore({
+    url: requiredEnv("QDRANT_URL"),
+    apiKey: requiredEnv("QDRANT_API_KEY"),
+    collection: requiredEnv("QDRANT_COLLECTION"),
+    dimensions,
+  });
+}
+
+function createEmbeddings(provider: string, dimensions: number): EmbeddingProvider {
+  if (provider === "voyage") {
+    return createVoyageEmbeddingProvider({
+      apiKey: requiredEnv("VOYAGE_API_KEY"),
+      modelId: process.env.VOYAGE_EMBEDDING_MODEL_ID?.trim() || "voyage-4-lite",
+      dimensions,
+      inputType: "query",
+      baseUrl: process.env.VOYAGE_BASE_URL?.trim() || undefined,
+    });
+  }
+  if (provider === "bedrock") {
+    return createBedrockEmbeddingProvider({
+      modelId: requiredEnv("BEDROCK_EMBEDDING_MODEL_ID"),
+      dimensions,
+    });
+  }
+  throw new Error(
+    `Unsupported EMBEDDING_PROVIDER "${provider}". Use "voyage" or "bedrock".`,
+  );
+}
+
+function createLlm(provider: string): LLMProvider {
+  if (provider === "gemini") {
+    return createGeminiLLMProvider({
+      apiKey: requiredEnv("GEMINI_API_KEY"),
+      modelId: process.env.GEMINI_MODEL_ID?.trim() || "gemini-2.5-flash",
+      defaultMaxOutputTokens: resolveRagConfig().maxOutputTokens,
+    });
+  }
+  throw new Error(
+    `Unsupported LLM_PROVIDER "${provider}". Use "gemini" (bedrock LLM not wired yet).`,
+  );
 }
 
 function buildUsageDeps(usage: UsageRepository): ChatUsageDeps {
@@ -94,12 +150,29 @@ function buildUsageDeps(usage: UsageRepository): ChatUsageDeps {
 function buildFromEnv(): ApiWiring {
   const tableName = requiredEnv("DOCUMENTS_TABLE_NAME");
   const bucketName = requiredEnv("DOCUMENTS_BUCKET_NAME");
+  const embeddingProvider = (
+    process.env.EMBEDDING_PROVIDER ?? "voyage"
+  )
+    .trim()
+    .toLowerCase();
+  const llmProvider = (process.env.LLM_PROVIDER ?? "gemini").trim().toLowerCase();
+  const dimensions = parseDimensions(embeddingProvider);
+
   const documents: DocumentRepository = createDynamoDocumentRepository({ tableName });
   const usageRepo: UsageRepository = createDynamoUsageRepository({ tableName });
   const objects: ObjectStorage = createS3ObjectStorage({ bucketName });
-  const vectors = requiredVectorStore();
+  const vectors = requiredVectorStore(dimensions);
+  const embeddings = createEmbeddings(embeddingProvider, dimensions);
+  const llm = createLlm(llmProvider);
   const deps: CreateUploadDeps = { documents, objects };
   const usageDeps = buildUsageDeps(usageRepo);
+  const askDeps: AskDeps = {
+    embeddings,
+    vectors,
+    llm,
+    usage: usageDeps,
+    config: resolveRagConfig(),
+  };
 
   return {
     documents: {
@@ -117,6 +190,9 @@ function buildFromEnv(): ApiWiring {
         recordChatTokens(auth, deltaTokens, usageDeps),
       withQuota: (auth, run, estimatedTokens) =>
         withChatQuota(auth, usageDeps, run, estimatedTokens),
+    },
+    chat: {
+      ask: (auth, input) => ask(auth, input, askDeps),
     },
   };
 }

@@ -8,7 +8,7 @@ Domain and application layer.
 * Document upload/delete use cases
 * Ingestion: extract → chunk → embed orchestration (`ingestDocument`)
 * Provider interfaces (`VectorStore`, `EmbeddingProvider`, `LLMProvider`, `DocumentRepository`, `ObjectStorage`)
-* Retrieval → confidence gate → LLM → citation flow (ask path; next)
+* Retrieval → confidence gate → LLM → citation flow (`ask`)
 
 ## Must not own
 
@@ -19,6 +19,10 @@ Domain and application layer.
 ## LLM ports
 
 * `LLMProvider.generate({ systemPrompt, userPrompt, maxOutputTokens? })` — grounded generation contract for ask
+
+## RAG ask
+
+* `ask(auth, { question }, deps)` — tenant-filtered retrieve → confidence gate → Gemini (or configured `LLMProvider`) with citations/abstain; quota via `withChatQuota` only when the LLM runs
 
 ## Auth helpers
 

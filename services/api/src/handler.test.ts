@@ -162,6 +162,11 @@ describe("handler routes", () => {
           throw new Error("unused");
         },
       },
+      chat: {
+        async ask() {
+          throw new Error("unused");
+        },
+      },
     });
 
     const result = (await handler(
@@ -250,6 +255,11 @@ describe("handler routes", () => {
           throw new Error("unused");
         },
       },
+      chat: {
+        async ask() {
+          throw new Error("unused");
+        },
+      },
     });
 
     const result = (await handler(
@@ -291,5 +301,97 @@ describe("handler routes", () => {
     const body = JSON.parse(result.body ?? "{}");
     assert.equal(body.document.documentId, "doc-1");
     assert.equal(body.uploadUrl, "https://example.com/presigned");
+  });
+
+  it("POST /ask returns grounded answer and usage", async () => {
+    setApiWiringForTests({
+      documents: {
+        async createUpload() {
+          throw new Error("unused");
+        },
+        async listDocuments() {
+          return [];
+        },
+        async getDocument() {
+          throw new Error("unused");
+        },
+        async deleteDocument() {
+          throw new Error("unused");
+        },
+      },
+      usage: {
+        async getUsage() {
+          throw new Error("unused");
+        },
+        async assertQuota() {
+          throw new Error("unused");
+        },
+        async recordTokens() {
+          throw new Error("unused");
+        },
+        async withQuota() {
+          throw new Error("unused");
+        },
+      },
+      chat: {
+        async ask(auth, input) {
+          return {
+            answer: `Widgets are blue (q=${input.question})`,
+            abstained: false,
+            citations: [
+              {
+                documentId: "d1",
+                chunkId: "c1",
+                score: 0.9,
+                excerpt: "Widgets are blue.",
+              },
+            ],
+            usage: {
+              period: "2026-10",
+              usedTokens: 40,
+              quotaTokens: 50_000,
+              remainingTokens: 49_960,
+            },
+          };
+        },
+      },
+    });
+
+    const result = (await handler(
+      baseEvent({
+        rawPath: "/ask",
+        body: JSON.stringify({ question: "What color?" }),
+        requestContext: {
+          accountId: "123",
+          apiId: "api",
+          domainName: "example.execute-api.us-east-1.amazonaws.com",
+          domainPrefix: "example",
+          http: {
+            method: "POST",
+            path: "/ask",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "test",
+          },
+          requestId: "req",
+          routeKey: "POST /ask",
+          stage: "$default",
+          time: "01/Jan/2026:00:00:00 +0000",
+          timeEpoch: 0,
+          authorizer: {
+            jwt: { claims: { sub: "tenant-xyz" } },
+          },
+        },
+      }),
+      {} as never,
+      () => undefined,
+    )) as APIGatewayProxyStructuredResultV2;
+
+    assert.equal(result.statusCode, 200);
+    const body = JSON.parse(result.body ?? "{}");
+    assert.equal(body.abstained, false);
+    assert.match(body.answer, /blue/);
+    assert.equal(body.citations.length, 1);
+    assert.equal(body.usage.usedTokens, 40);
   });
 });

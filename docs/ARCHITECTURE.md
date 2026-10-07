@@ -455,7 +455,7 @@ EmbeddingProvider
   └── BedrockEmbeddingProvider  (target; env switch)
 
 LLMProvider
-  ├── GeminiLLMProvider         (interim; adapter ready, ask route next)
+  ├── GeminiLLMProvider         (interim; wired on POST /ask)
   └── BedrockLLMProvider        (target; not yet implemented)
 ```
 

@@ -85,6 +85,7 @@ Add these SAM parameters (see `samconfig.toml.example`) for ingestion / ask:
 * `VoyageApiKey` / `VoyageEmbeddingModelId` (when `voyage`)
 * `EmbeddingDimensions` (Voyage default `1024`; Titan often `256`)
 * `LlmProvider` (`gemini` default) + `GeminiApiKey` / `GeminiModelId` (ask path; keyed on API Lambda)
+* API Lambda also receives embedding env (`EmbeddingProvider`, Voyage/Bedrock) for query vectors on `POST /ask`
 * Target switch-back: `EmbeddingProvider=bedrock`, `BedrockEmbeddingModelId`, `LlmProvider=bedrock`
 
 Changing embedding provider or dimensions requires a compatible Qdrant collection and re-ingest.
