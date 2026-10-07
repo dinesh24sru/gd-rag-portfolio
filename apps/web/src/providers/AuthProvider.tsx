@@ -16,6 +16,7 @@ import {
   type CognitoUser,
 } from "@/lib/auth/cognito";
 import { isCognitoConfigured } from "@/lib/auth/config";
+import { useIdleTimeout } from "@/lib/auth/useIdleTimeout";
 
 type AuthContextValue = {
   user: CognitoUser | null;
@@ -52,6 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     signOutCognito();
   }, []);
+
+  useIdleTimeout(Boolean(user), logout);
 
   const value = useMemo(
     () => ({
